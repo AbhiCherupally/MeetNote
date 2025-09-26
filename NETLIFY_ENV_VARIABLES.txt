@@ -1,0 +1,2 @@
+NEXT_PUBLIC_API_URL=https://meetnote.onrender.com
+NODE_ENV=production

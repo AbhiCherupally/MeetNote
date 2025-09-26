@@ -7,25 +7,39 @@ class MeetNoteAPI {
   }
 
   init() {
-    // Extension installation/update handler
-    chrome.runtime.onInstalled.addListener(this.handleInstalled.bind(this));
-    
-    // Tab update listener for meeting detection
-    chrome.tabs.onUpdated.addListener(this.handleTabUpdate.bind(this));
-    
-    // Message listener for content script communication
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-    
-    // Command listener for keyboard shortcuts
-    chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
-    
-    // Context menu creation
-    this.createContextMenus();
-    
-    console.log('✅ MeetNote background service worker initialized');
-    
-    // Test API connection
-    this.testAPIConnection();
+    try {
+      console.log('MeetNote background service worker initializing...');
+      
+      // Extension installation/update handler
+      if (chrome.runtime && chrome.runtime.onInstalled) {
+        chrome.runtime.onInstalled.addListener(this.handleInstalled.bind(this));
+      }
+      
+      // Tab update listener for meeting detection
+      if (chrome.tabs && chrome.tabs.onUpdated) {
+        chrome.tabs.onUpdated.addListener(this.handleTabUpdate.bind(this));
+      }
+      
+      // Message listener for content script communication
+      if (chrome.runtime && chrome.runtime.onMessage) {
+        chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+      }
+      
+      // Command listener for keyboard shortcuts
+      if (chrome.commands && chrome.commands.onCommand) {
+        chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
+      }
+      
+      // Context menu creation
+      this.createContextMenus();
+      
+      console.log('✅ MeetNote background service worker initialized successfully');
+      
+      // Test API connectivity
+      this.testAPIConnection();
+    } catch (error) {
+      console.error('❌ Failed to initialize MeetNote background script:', error);
+    }
   }
 
   async testAPIConnection() {
@@ -222,33 +236,45 @@ class MeetNoteAPI {
   }
 
   createContextMenus() {
-    chrome.contextMenus.removeAll(() => {
-      chrome.contextMenus.create({
-        id: 'meetnote-start-recording',
-        title: 'Start Recording with MeetNote',
-        contexts: ['page']
-      });
-
-      chrome.contextMenus.create({
-        id: 'meetnote-create-highlight',
-        title: 'Create Highlight',
-        contexts: ['selection']
-      });
-    });
-
-    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-      switch (info.menuItemId) {
-        case 'meetnote-start-recording':
-          chrome.tabs.sendMessage(tab.id, { type: 'START_RECORDING_CONTEXT' });
-          break;
-        case 'meetnote-create-highlight':
-          chrome.tabs.sendMessage(tab.id, {
-            type: 'CREATE_HIGHLIGHT_CONTEXT',
-            selectedText: info.selectionText
+    try {
+      if (chrome.contextMenus) {
+        chrome.contextMenus.removeAll(() => {
+          chrome.contextMenus.create({
+            id: 'meetnote-start-recording',
+            title: 'Start Recording with MeetNote',
+            contexts: ['page']
           });
-          break;
+
+          chrome.contextMenus.create({
+            id: 'meetnote-create-highlight',
+            title: 'Create Highlight',
+            contexts: ['selection']
+          });
+        });
+
+        chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+          try {
+            switch (info.menuItemId) {
+              case 'meetnote-start-recording':
+                chrome.tabs.sendMessage(tab.id, { type: 'START_RECORDING_CONTEXT' });
+                break;
+              case 'meetnote-create-highlight':
+                chrome.tabs.sendMessage(tab.id, {
+                  type: 'CREATE_HIGHLIGHT_CONTEXT',
+                  selectedText: info.selectionText
+                });
+                break;
+            }
+          } catch (error) {
+            console.error('Context menu error:', error);
+          }
+        });
+      } else {
+        console.log('Context menus not available in this environment');
       }
-    });
+    } catch (error) {
+      console.error('Failed to create context menus:', error);
+    }
   }
 
   async startRecording(data, tab) {

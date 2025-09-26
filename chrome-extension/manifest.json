@@ -22,7 +22,7 @@
     "https://*.teams.microsoft.com/*",
     "https://webex.com/*",
     "https://*.webex.com/*",
-    "https://api.meetnote.app/*"
+    "https://meetnote.onrender.com/*"
   ],
   
   "background": {
@@ -76,6 +76,6 @@
   },
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://api.meetnote.app https://openrouter.ai"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://meetnote.onrender.com https://openrouter.ai"
   }
 }

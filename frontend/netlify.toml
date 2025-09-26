@@ -8,7 +8,7 @@ publish = "out"
 
 # Environment Variables
 [build.environment]
-  NEXT_PUBLIC_API_URL = "https://your-render-backend.onrender.com"
+  NEXT_PUBLIC_API_URL = "https://meetnote.onrender.com"
   
 # Redirects for SPA routing
 [[redirects]]

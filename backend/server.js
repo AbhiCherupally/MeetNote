@@ -33,7 +33,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? [process.env.CORS_ORIGIN, 'chrome-extension://*']
+    ? [process.env.CORS_ORIGIN, 'chrome-extension://*', 'https://*.netlify.app']
     : ['http://localhost:3000', 'http://localhost:3001', 'chrome-extension://*'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

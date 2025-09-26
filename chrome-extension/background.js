@@ -1,7 +1,7 @@
 // Background service worker for MeetNote extension
-class MeetNoteBackground {
+class MeetNoteAPI {
   constructor() {
-    this.apiUrl = 'https://api.meetnote.app';
+    this.apiUrl = 'https://meetnote.onrender.com';
     this.currentRecording = null;
     this.init();
   }

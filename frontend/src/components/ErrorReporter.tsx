@@ -1,14 +1,15 @@
-"use client";
+"use client"
 
-export default function ErrorReporter({ 
-  error, 
-  reset 
-}: {
-  error?: Error & { digest?: string };
-  reset?: () => void;
-}) {
+import React from 'react'
+
+interface ErrorReporterProps {
+  error?: Error & { digest?: string }
+  reset?: () => void
+}
+
+export default function ErrorReporter({ error, reset }: ErrorReporterProps) {
   if (!error) {
-    return null;
+    return null
   }
 
   return (
@@ -49,5 +50,5 @@ export default function ErrorReporter({
         </div>
       </body>
     </html>
-  );
+  )
 }

@@ -2,7 +2,7 @@
 
 [build]
   base = "frontend"
-  command = "npm install && npm run build"
+  command = "npm install --include=dev && npm run build"
   publish = "out"
 
 [build.environment]

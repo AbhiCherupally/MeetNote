@@ -18,14 +18,14 @@ export default function DemoPage() {
             Interactive Experience
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            See Grain Extension
+            See MeetNote Extension
             <br />
             <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               in Action
             </span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Experience how Grain Extension transforms your meeting workflow in real-time. 
+            Experience how MeetNote transforms your meeting workflow in real-time. 
             Watch our interactive demo to see AI-powered meeting enhancement in action.
           </p>
           
@@ -50,10 +50,10 @@ export default function DemoPage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Why thousands choose Grain Extension
+            Why thousands choose MeetNote
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Experience the benefits that make Grain Extension essential for productive meetings
+            Experience the benefits that make MeetNote essential for productive meetings
           </p>
         </div>
 

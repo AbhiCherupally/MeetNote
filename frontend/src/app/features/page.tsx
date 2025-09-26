@@ -130,7 +130,7 @@ export default function FeaturesPage() {
             </span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            From instant recording to AI-powered insights, discover how Grain Extension 
+            From instant recording to AI-powered insights, discover how MeetNote 
             transforms your meeting workflow with cutting-edge browser-native features.
           </p>
         </div>
@@ -273,7 +273,7 @@ export default function FeaturesPage() {
             Ready to experience these features?
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Install Grain Extension now and start transforming your meetings with AI-powered insights and seamless browser integration.
+                        Install MeetNote now and start transforming your meetings with AI-powered insights and seamless browser integration.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="lg" className="gap-2 px-8 py-6 text-lg">

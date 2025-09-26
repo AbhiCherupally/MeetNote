@@ -22,10 +22,10 @@ export default function Hero() {
 
         {/* Headline */}
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
-          AI-Powered Meeting
+          MeetNote - AI Meeting
           <br />
           <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Notes & Insights
+            Assistant
           </span>
         </h1>
 
@@ -61,7 +61,7 @@ export default function Hero() {
           <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8 border">
             <Image
               src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=2850&q=80"
-              alt="Grain Chrome Extension Interface"
+              alt="MeetNote Chrome Extension Interface"
               width={1200}
               height={800}
               className="rounded-lg shadow-lg"
@@ -71,9 +71,9 @@ export default function Hero() {
             <div className="absolute top-12 right-12 bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 border max-w-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-6 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">G</span>
+                  <span className="text-white font-bold text-xs">M</span>
                 </div>
-                <span className="font-semibold">Grain Extension</span>
+                <span className="font-semibold">MeetNote Extension</span>
                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
               </div>
               <div className="text-sm space-y-2">

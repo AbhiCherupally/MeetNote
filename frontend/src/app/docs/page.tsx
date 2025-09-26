@@ -25,7 +25,7 @@ const installSteps = [
   {
     step: 1,
     title: "Visit Chrome Web Store",
-    description: "Click the button below to go to the Grain Extension page in the Chrome Web Store",
+    description: "Click the button below to go to the MeetNote Extension page in the Chrome Web Store",
     action: "Open Chrome Web Store",
     icon: <Chrome className="w-6 h-6" />
   },
@@ -46,7 +46,7 @@ const installSteps = [
   {
     step: 4,
     title: "Connect Your Account",
-    description: "Sign in with your Grain account or create a new one to sync your meetings",
+    description: "Sign in with your MeetNote account or create a new one to sync your meetings",
     action: "Sign In",
     icon: <User className="w-6 h-6" />
   }
@@ -122,7 +122,7 @@ export default function DocsPage() {
             </span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Get up and running with Grain Extension in minutes. Follow our step-by-step guide 
+            Get up and running with MeetNote Extension in minutes. Follow our step-by-step guide 
             for seamless installation and configuration.
           </p>
         </div>
@@ -253,9 +253,9 @@ export default function DocsPage() {
                 <div>
                   <h3 className="font-semibold mb-3">Account Connection</h3>
                   <div className="bg-muted/30 rounded-lg p-4">
-                    <p className="text-sm mb-3">Connect your existing Grain account or create a new one:</p>
+                                        <p className="text-sm mb-3">Connect your existing MeetNote account or create a new one:</p>
                     <div className="flex gap-3">
-                      <Button>Sign In with Grain</Button>
+                                            <Button>Sign In with MeetNote</Button>
                       <Button variant="outline">Create New Account</Button>
                     </div>
                   </div>
@@ -333,7 +333,7 @@ export default function DocsPage() {
                     <div>
                       <p className="text-sm font-medium">Privacy First Approach</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Grain Extension only requests the minimum permissions needed for functionality. 
+                        MeetNote Extension only requests the minimum permissions needed for functionality. 
                         All data is processed securely and never shared without your consent.
                       </p>
                     </div>

@@ -16,7 +16,7 @@ export default function Footer() {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">G</span>
               </div>
-              <span className="font-semibold text-lg">Grain Extension</span>
+              <span className="font-semibold text-lg">MeetNote</span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-xs">
               AI-powered meeting notes and insights directly in your browser. 
@@ -75,7 +75,7 @@ export default function Footer() {
             Ready to transform your meetings?
           </h3>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Join thousands of professionals who are already using Grain Extension to make their meetings more productive.
+            Join thousands of professionals who are already using MeetNote to make their meetings more productive.
           </p>
           <Button size="lg" className="gap-2">
             <Chrome className="w-5 h-5" />
@@ -86,7 +86,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="mt-8 pt-8 border-t flex flex-col sm:flex-row justify-between items-center">
           <p className="text-muted-foreground text-sm">
-            © 2024 Grain Extension. All rights reserved.
+            © 2024 MeetNote. All rights reserved.
           </p>
           <div className="flex items-center gap-4 mt-4 sm:mt-0">
             <span className="text-muted-foreground text-sm">Available for:</span>

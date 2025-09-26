@@ -46,7 +46,7 @@ const features = [
   {
     icon: <Zap className="w-6 h-6" />,
     title: "Smart Context Detection",
-    description: "Automatically recognizes meeting-related content and suggests relevant Grain actions.",
+    description: "Automatically recognizes meeting-related content and suggests relevant MeetNote actions.",
     priority: "Medium",
     color: "bg-pink-50 dark:bg-pink-950"
   },

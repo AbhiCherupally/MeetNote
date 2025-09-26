@@ -69,7 +69,7 @@ export default function ExtensionInstaller() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-center gap-4">
+      <div className="flex flex-col items-center justify-center gap-4">
         <Button
           onClick={handleInstallExtension}
           disabled={installationStatus === 'installing'}
@@ -88,12 +88,7 @@ export default function ExtensionInstaller() {
         )}
       </div>
 
-      <div className="text-xs text-muted-foreground">
-        <p>✅ Works with Zoom, Google Meet, Microsoft Teams</p>
-        <p>✅ Real-time transcription with Assembly AI</p>
-        <p>✅ AI-powered insights with OpenRouter</p>
-        <p>✅ Connected to live backend: <code>meetnote.onrender.com</code></p>
-      </div>
+
     </div>
   )
 }

@@ -28,7 +28,7 @@ const demoSteps = [
   {
     id: 2,
     title: "One-Click Recording",
-    description: "Click the Grain extension icon to start recording instantly",
+    description: "Click the MeetNote extension icon to start recording instantly",
     action: "Recording started",
     duration: 3000
   },
@@ -192,7 +192,7 @@ export default function InteractiveDemo() {
                       <div className="w-6 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded flex items-center justify-center">
                         <span className="text-white font-bold text-xs">G</span>
                       </div>
-                      <span className="font-semibold text-sm">Grain Extension</span>
+                      <span className="font-semibold text-sm">MeetNote Extension</span>
                       {isRecording && (
                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                       )}
@@ -301,7 +301,7 @@ export default function InteractiveDemo() {
         <div className="text-center mt-8 p-6 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 rounded-lg">
           <h3 className="text-xl font-bold mb-2">Demo Complete! 🎉</h3>
           <p className="text-muted-foreground mb-4">
-            See how Grain Extension can transform your meeting workflow with just a few clicks.
+            See how MeetNote can transform your meeting workflow with just a few clicks.
           </p>
           <div className="flex justify-center gap-3">
             <Button onClick={resetDemo} variant="outline">

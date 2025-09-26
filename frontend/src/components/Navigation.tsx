@@ -16,9 +16,9 @@ export default function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">G</span>
+              <span className="text-white font-bold text-sm">M</span>
             </div>
-            <span className="font-semibold text-lg">Grain Extension</span>
+            <span className="font-semibold text-lg">MeetNote</span>
           </Link>
 
           {/* Desktop Navigation */}

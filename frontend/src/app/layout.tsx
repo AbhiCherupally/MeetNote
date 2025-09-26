@@ -5,7 +5,7 @@ import ErrorReporter from "@/components/ErrorReporter";
 import Script from "next/script";
 
 export const metadata: Metadata = {
-  title: "Grain Chrome Extension - AI-Powered Meeting Notes",
+  title: "MeetNote - AI-Powered Meeting Assistant",
   description: "Record, transcribe, and extract AI-powered insights from any meeting directly in your browser. No separate software required.",
 };
 

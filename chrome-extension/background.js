@@ -206,6 +206,13 @@ class MeetNoteAPI {
           sendResponse(authStatus);
           break;
           
+        case 'CHECK_AUTH':
+          console.log('🔐 Quick auth check');
+          const quickAuthStatus = await this.getAuthStatus();
+          console.log('📋 Quick auth check result:', quickAuthStatus);
+          sendResponse(quickAuthStatus);
+          break;
+          
         case 'AUTHENTICATE':
           console.log('🔑 Authenticating user:', message.data?.email);
           const authResult = await this.authenticate(message.data);
@@ -221,6 +228,21 @@ class MeetNoteAPI {
         case 'UPDATE_SETTINGS':
           console.log('💾 Updating settings:', message.data);
           await chrome.storage.sync.set({ settings: message.data });
+          sendResponse({ success: true });
+          break;
+          
+        case 'OPEN_POPUP':
+          console.log('🪟 Opening extension popup');
+          // In Manifest V3, we can't programmatically open popup, 
+          // but we can show a notification to remind user to click extension icon
+          if (chrome.notifications) {
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'icons/icon48.png',
+              title: 'MeetNote Login Required',
+              message: 'Please click the MeetNote extension icon to log in before recording meetings.'
+            });
+          }
           sendResponse({ success: true });
           break;
           

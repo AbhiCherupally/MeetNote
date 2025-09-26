@@ -211,6 +211,18 @@ class MeetNoteContent {
     console.log('🎬 Content: Starting recording process...');
     
     try {
+      // First check if user is logged in
+      console.log('🔐 Content: Checking authentication status...');
+      const authResponse = await chrome.runtime.sendMessage({ type: 'CHECK_AUTH' });
+      console.log('🔍 Content: Auth status:', authResponse);
+      
+      if (!authResponse || !authResponse.authenticated) {
+        console.log('❌ Content: User not authenticated, opening popup for login');
+        this.showLoginRequired();
+        return;
+      }
+      
+      console.log('✅ Content: User authenticated, proceeding with recording');
       this.showLoading('Starting recording...');
       
       // Content scripts can't use chrome.tabs.query, so we get info from current page
@@ -534,6 +546,16 @@ class MeetNoteContent {
   showLoading(message = 'Loading...') {
     console.log('⏳ Content: Loading -', message);
     // Could add a loading spinner here
+  }
+
+  showLoginRequired() {
+    console.log('🔐 Content: Login required');
+    this.showNotification('Please log in to MeetNote extension first', 'error');
+    
+    // Open the extension popup to allow login
+    setTimeout(() => {
+      chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
+    }, 2000);
   }
 
   hideLoading() {

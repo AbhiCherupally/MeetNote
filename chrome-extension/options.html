@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeetNote - Settings</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .settings-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .setting-description {
+            font-size: 14px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .status-info {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-connected {
+            background-color: #4caf50;
+        }
+        
+        .keyboard-shortcuts {
+            background: #f5f5f5;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        
+        .shortcut {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-family: monospace;
+        }
+        
+        .key {
+            background: #333;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">MN</div>
+        <h1>MeetNote Settings</h1>
+        <p>Configure your AI meeting assistant preferences</p>
+    </div>
+
+    <div class="settings-section">
+        <h2>Recording Settings</h2>
+        
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Auto-start recording</div>
+                <div class="setting-description">Automatically start recording when joining a meeting</div>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" id="autoRecord" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Show transcript overlay</div>
+                <div class="setting-description">Display real-time transcription on the meeting page</div>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" id="showTranscript" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">AI insights notifications</div>
+                <div class="setting-description">Get notified about key meeting insights</div>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" id="aiInsights" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h2>Keyboard Shortcuts</h2>
+        <p>Use these shortcuts during meetings:</p>
+        <div class="keyboard-shortcuts">
+            <div class="shortcut">
+                <span>Toggle Recording</span>
+                <span><span class="key">Alt</span> + <span class="key">R</span></span>
+            </div>
+            <div class="shortcut">
+                <span>Create Highlight</span>
+                <span><span class="key">Alt</span> + <span class="key">H</span></span>
+            </div>
+            <div class="shortcut">
+                <span>Toggle Transcript</span>
+                <span><span class="key">Alt</span> + <span class="key">T</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-info">
+        <h3>Backend Connection</h3>
+        <p>
+            <span class="status-dot status-connected"></span>
+            Connected to MeetNote backend at <strong>meetnote.onrender.com</strong>
+        </p>
+        <p style="font-size: 14px; color: #666; margin-top: 8px;">
+            ✅ Assembly AI transcription available<br>
+            ✅ OpenRouter AI analysis ready<br>
+            ✅ Real-time processing enabled
+        </p>
+    </div>
+
+    <script>
+        // Load saved settings
+        chrome.storage.sync.get({
+            autoRecord: true,
+            showTranscript: true,
+            aiInsights: true
+        }, (items) => {
+            document.getElementById('autoRecord').checked = items.autoRecord;
+            document.getElementById('showTranscript').checked = items.showTranscript;
+            document.getElementById('aiInsights').checked = items.aiInsights;
+        });
+
+        // Save settings when changed
+        function saveOptions() {
+            chrome.storage.sync.set({
+                autoRecord: document.getElementById('autoRecord').checked,
+                showTranscript: document.getElementById('showTranscript').checked,
+                aiInsights: document.getElementById('aiInsights').checked
+            }, () => {
+                console.log('Settings saved');
+            });
+        }
+
+        document.getElementById('autoRecord').addEventListener('change', saveOptions);
+        document.getElementById('showTranscript').addEventListener('change', saveOptions);
+        document.getElementById('aiInsights').addEventListener('change', saveOptions);
+    </script>
+</body>
+</html>

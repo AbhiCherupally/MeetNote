@@ -1,4 +1,28 @@
 {
+  "name": "meetnote",
+  "version": "1.0.0",
+  "description": "MeetNote AI Meeting Assistant - Full Stack Application",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "cd backend && node server.js",
+    "dev": "cd backend && npm run dev",
+    "build": "cd backend && npm install",
+    "install-backend": "cd backend && npm install",
+    "install-frontend": "cd frontend && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AbhiCherupally/MeetNote.git"
+  },
+  "keywords": [
+    "meetnote",
+    "ai",
+    "meetings",
+    "chrome-extension",
+    "transcription"
+  ],
+  "author": "MeetNote Team",
+  "license": "MIT",
   "devDependencies": {
     "nodemon": "^3.1.10"
   }

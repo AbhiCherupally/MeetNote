@@ -1,21 +1,19 @@
-# Netlify Deployment Configuration
+# Netlify Deployment Configuration for MeetNote
 
 [build]
-  # Base directory for build
+  # Base directory (where to run build commands)
   base = "frontend"
   
-  # Build Command
-  command = "npm run build"
+  # Build Command - ensure dependencies are installed first
+  command = "npm ci && npm run build"
   
-  # Publish Directory for Next.js static export
+  # Publish Directory for Next.js static export (relative to base)
   publish = "out"
 
   # Environment Variables
   [build.environment]
     NEXT_PUBLIC_API_URL = "https://meetnote.onrender.com"
     NODE_ENV = "production"
-  
-# No redirects needed for static export - Netlify serves files directly
 
 # Headers for security
 [[headers]]

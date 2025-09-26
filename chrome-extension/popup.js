@@ -188,10 +188,15 @@ class MeetNotePopup {
   async handleLogin(event) {
     event.preventDefault();
     
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     
-    console.log('🔐 Login attempt with:', { email, passwordLength: password.length });
+    console.log('🔐 Login attempt with:', { 
+      email, 
+      passwordLength: password.length,
+      emailBytes: Array.from(email).map(c => c.charCodeAt(0)),
+      passwordBytes: Array.from(password).map(c => c.charCodeAt(0))
+    });
     
     if (!email || !password) {
       this.showError('Please fill in all fields');

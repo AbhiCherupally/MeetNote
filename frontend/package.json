@@ -97,6 +97,7 @@
         "tailwindcss-animate": "^1.0.7",
         "three": "^0.178.0",
         "three-globe": "^2.43.0",
+        "typescript": "^5",
         "vaul": "^1.1.2",
         "zod": "^4.1.8"
     },
@@ -108,8 +109,6 @@
         "@types/react-syntax-highlighter": "^15.5.13",
         "@types/three": "^0.178.0",
         "eslint": "^9.35.0",
-        "eslint-config-next": "^15.5.3",
-        "tw-animate-css": "^1.3.8",
-        "typescript": "^5"
+        "eslint-config-next": "^15.5.3"
     }
 }

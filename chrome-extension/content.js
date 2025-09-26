@@ -1,4 +1,7 @@
 // Content script for MeetNote extension - injected into meeting platforms
+if (typeof window.meetNoteContentInitialized === 'undefined') {
+  window.meetNoteContentInitialized = true;
+
 class MeetNoteContent {
   constructor() {
     this.isRecording = false;
@@ -633,3 +636,5 @@ const meetNoteContent = new MeetNoteContent();
 window.addEventListener('beforeunload', () => {
   meetNoteContent.cleanup();
 });
+
+} // End of meetNoteContentInitialized check

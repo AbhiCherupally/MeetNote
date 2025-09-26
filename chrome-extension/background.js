@@ -22,7 +22,25 @@ class MeetNoteAPI {
     // Context menu creation
     this.createContextMenus();
     
-    console.log('MeetNote background service worker initialized');
+    console.log('✅ MeetNote background service worker initialized');
+    
+    // Test API connection
+    this.testAPIConnection();
+  }
+
+  async testAPIConnection() {
+    try {
+      console.log('🔗 Testing API connection to:', this.apiUrl);
+      const response = await fetch(`${this.apiUrl}/health`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ API connection successful:', data);
+      } else {
+        console.error('❌ API connection failed:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ API connection error:', error);
+    }
   }
 
   async handleInstalled(details) {
@@ -266,7 +284,7 @@ class MeetNoteAPI {
       // Show notification
       chrome.notifications.create({
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
+        iconUrl: 'icons/icon.svg',
         title: 'MeetNote Recording Started',
         message: `Recording "${meeting.data.title}" in progress`
       });
@@ -308,7 +326,7 @@ class MeetNoteAPI {
       // Show notification
       chrome.notifications.create({
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
+        iconUrl: 'icons/icon.svg',
         title: 'MeetNote Recording Stopped',
         message: 'Processing recording and generating insights...'
       });
@@ -351,7 +369,7 @@ class MeetNoteAPI {
       // Show notification
       chrome.notifications.create({
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
+        iconUrl: 'icons/icon.svg',
         title: 'Highlight Created',
         message: 'Highlight saved successfully'
       });

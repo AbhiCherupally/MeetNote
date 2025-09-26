@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Outer border -->
+  <rect x="3" y="3" width="42" height="42" fill="white" stroke="black" stroke-width="2"/>
+  
+  <!-- MEET section (black background) -->
+  <rect x="4" y="4" width="16" height="40" fill="black"/>
+  
+  <!-- NOTES section is already white -->
+  
+  <!-- Text for 48px - can fit MEET and NOTES -->
+  <text x="12" y="27" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">MEET</text>
+  <text x="32" y="27" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="black">NOTES</text>
+</svg>

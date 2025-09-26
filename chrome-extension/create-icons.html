@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create MeetNote Icons</title>
+</head>
+<body>
+    <canvas id="canvas16" width="16" height="16" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    <canvas id="canvas32" width="32" height="32" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    <canvas id="canvas48" width="48" height="48" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    <canvas id="canvas128" width="128" height="128" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+
+    <script>
+        // Create the MeetNote logo design based on the provided image
+        function drawMeetNoteLogo(ctx, size) {
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Calculate proportional sizes
+            const borderWidth = Math.max(1, size * 0.05);
+            const margin = size * 0.1;
+            
+            // Draw outer border
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = borderWidth;
+            ctx.strokeRect(margin, margin, size - 2*margin, size - 2*margin);
+            
+            // Calculate split point (roughly 40% for "MEET", 60% for "NOTES")
+            const splitPoint = margin + (size - 2*margin) * 0.4;
+            
+            // Draw "MEET" section (black background)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(margin + borderWidth/2, margin + borderWidth/2, 
+                        splitPoint - margin - borderWidth, 
+                        size - 2*margin - borderWidth);
+            
+            // Draw "NOTES" section (white background)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(splitPoint, margin + borderWidth/2, 
+                        size - splitPoint - margin - borderWidth/2, 
+                        size - 2*margin - borderWidth);
+            
+            // Add text if size is large enough
+            if (size >= 32) {
+                const fontSize = size * 0.12;
+                ctx.font = `bold ${fontSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // "MEET" text (white on black)
+                ctx.fillStyle = '#ffffff';
+                const meetCenterX = margin + (splitPoint - margin) / 2;
+                const textY = size / 2;
+                
+                if (size >= 48) {
+                    ctx.fillText('MEET', meetCenterX, textY);
+                } else {
+                    ctx.fillText('M', meetCenterX, textY);
+                }
+                
+                // "NOTES" text (black on white)
+                ctx.fillStyle = '#000000';
+                const notesCenterX = splitPoint + (size - splitPoint - margin) / 2;
+                
+                if (size >= 48) {
+                    ctx.fillText('NOTES', notesCenterX, textY);
+                } else {
+                    ctx.fillText('N', notesCenterX, textY);
+                }
+            }
+        }
+        
+        // Generate all icon sizes
+        [16, 32, 48, 128].forEach(size => {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+            drawMeetNoteLogo(ctx, size);
+            
+            // Create download link
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `icon${size}.png`;
+                link.textContent = `Download ${size}x${size}`;
+                link.style.display = 'block';
+                link.style.margin = '5px';
+                document.body.appendChild(link);
+            });
+        });
+    </script>
+</body>
+</html>

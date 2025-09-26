@@ -18,14 +18,21 @@ class MeetNotePopup {
       this.setupEventListeners();
     }
 
-    // Check authentication status
-    await this.checkAuthStatus();
-    
-    // Check for current meeting
-    await this.checkMeetingStatus();
-    
-    // Load user settings
-    await this.loadSettings();
+    try {
+      // Check authentication status
+      await this.checkAuthStatus();
+      
+      // Check for current meeting
+      await this.checkMeetingStatus();
+      
+      // Load user settings
+      await this.loadSettings();
+      
+      console.log('MeetNote popup initialization complete');
+    } catch (error) {
+      console.error('Failed to initialize popup:', error);
+      this.showError('Failed to initialize extension');
+    }
   }
 
   setupEventListeners() {
@@ -97,6 +104,11 @@ class MeetNotePopup {
       
       const response = await chrome.runtime.sendMessage({ type: 'GET_AUTH_STATUS' });
       
+      if (chrome.runtime.lastError) {
+        console.error('Chrome runtime error:', chrome.runtime.lastError);
+        throw new Error(chrome.runtime.lastError.message);
+      }
+      
       if (response && response.authenticated) {
         this.showMainContent(response.user);
       } else {
@@ -105,6 +117,7 @@ class MeetNotePopup {
     } catch (error) {
       console.error('Auth check failed:', error);
       this.showAuthSection();
+      this.showError(`Authentication check failed: ${error.message}`);
     } finally {
       this.hideLoading();
     }

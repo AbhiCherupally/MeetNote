@@ -27,7 +27,7 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? ['https://meetnote.app', 'chrome-extension://*']
+      ? ['https://meetnoteapp.netlify.app', 'chrome-extension://*']
       : ['http://localhost:3000', 'chrome-extension://*'],
     credentials: true
   }
@@ -51,7 +51,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://meetnote.app', 'chrome-extension://*']
+    ? ['https://meetnoteapp.netlify.app', 'chrome-extension://*']
     : ['http://localhost:3000', 'chrome-extension://*'],
   credentials: true
 }));

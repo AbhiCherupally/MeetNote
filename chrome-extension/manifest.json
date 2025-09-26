@@ -1,0 +1,81 @@
+{
+  "manifest_version": 3,
+  "name": "MeetNote - AI Meeting Assistant",
+  "version": "1.0.0",
+  "description": "AI-powered meeting recording, transcription, and insights directly in your browser",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "notifications",
+    "tabs",
+    "webRequest",
+    "identity",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "https://zoom.us/*",
+    "https://*.zoom.us/*",
+    "https://meet.google.com/*",
+    "https://teams.microsoft.com/*",
+    "https://*.teams.microsoft.com/*",
+    "https://webex.com/*",
+    "https://*.webex.com/*",
+    "https://api.meetnote.app/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "https://zoom.us/*",
+        "https://*.zoom.us/*",
+        "https://meet.google.com/*",
+        "https://teams.microsoft.com/*",
+        "https://*.teams.microsoft.com/*",
+        "https://webex.com/*",
+        "https://*.webex.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MeetNote"
+  },
+  
+  "commands": {
+    "toggle-recording": {
+      "suggested_key": {
+        "default": "Alt+R",
+        "mac": "MacCtrl+R"
+      },
+      "description": "Toggle meeting recording"
+    },
+    "create-highlight": {
+      "suggested_key": {
+        "default": "Alt+H",
+        "mac": "MacCtrl+H"
+      },
+      "description": "Create highlight at current moment"
+    },
+    "toggle-transcript": {
+      "suggested_key": {
+        "default": "Alt+T",
+        "mac": "MacCtrl+T"
+      },
+      "description": "Toggle transcript overlay"
+    }
+  },
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://api.meetnote.app https://openrouter.ai"
+  }
+}

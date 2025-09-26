@@ -1,0 +1,25 @@
+# Render Deployment Configuration
+# This file tells Render how to build and deploy your app
+
+# Build Command (optional - Render auto-detects Node.js)
+build: npm install
+
+# Start Command  
+start: node src/app.js
+
+# Environment
+env: node
+
+# Health Check Endpoint
+healthcheck: /health
+
+# Auto-Deploy
+autoDeploy: true
+
+# Build Settings
+buildFilter:
+  paths:
+  - backend/**
+  ignoredPaths:
+  - frontend/**
+  - chrome-extension/**

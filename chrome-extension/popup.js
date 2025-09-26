@@ -40,6 +40,7 @@ class MeetNotePopup {
     const loginForm = document.getElementById('loginForm');
     const googleSignIn = document.getElementById('googleSignIn');
     const signUpLink = document.getElementById('signUpLink');
+    const passwordToggle = document.getElementById('passwordToggle');
 
     if (loginForm) {
       loginForm.addEventListener('submit', this.handleLogin.bind(this));
@@ -47,6 +48,10 @@ class MeetNotePopup {
     
     if (googleSignIn) {
       googleSignIn.addEventListener('click', this.handleGoogleSignIn.bind(this));
+    }
+    
+    if (passwordToggle) {
+      passwordToggle.addEventListener('click', this.togglePasswordVisibility.bind(this));
     }
 
     // Recording controls
@@ -167,11 +172,26 @@ class MeetNotePopup {
     return null;
   }
 
+  togglePasswordVisibility() {
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.querySelector('.password-toggle-icon');
+    
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      toggleIcon.textContent = '🙈'; // Hide password icon
+    } else {
+      passwordInput.type = 'password';
+      toggleIcon.textContent = '👁️'; // Show password icon
+    }
+  }
+
   async handleLogin(event) {
     event.preventDefault();
     
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
+    
+    console.log('🔐 Login attempt with:', { email, passwordLength: password.length });
     
     if (!email || !password) {
       this.showError('Please fill in all fields');
@@ -181,18 +201,26 @@ class MeetNotePopup {
     try {
       this.showLoading('Signing in...');
       
+      console.log('📤 Sending authentication request to background...');
       const response = await chrome.runtime.sendMessage({
         type: 'AUTHENTICATE',
         data: { email, password }
       });
 
-      if (response && response.user) {
-        this.showMainContent(response.user);
+      console.log('📥 Authentication response:', response);
+
+      if (response && response.success && response.data && response.data.user) {
+        console.log('✅ Login successful:', response.data.user);
+        this.showMainContent(response.data.user);
+      } else if (response && response.error) {
+        console.error('❌ Authentication error:', response.error);
+        this.showError(`Login failed: ${response.error}`);
       } else {
-        this.showError('Invalid credentials');
+        console.error('❌ Unexpected response format:', response);
+        this.showError('Invalid credentials - please check your email and password');
       }
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('❌ Login exception:', error);
       this.showError('Login failed. Please try again.');
     } finally {
       this.hideLoading();

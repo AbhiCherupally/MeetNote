@@ -215,8 +215,13 @@ class MeetNoteAPI {
           
         case 'AUTHENTICATE':
           console.log('🔑 Authenticating user:', message.data?.email);
-          const authResult = await this.authenticate(message.data);
-          sendResponse({ success: true, data: authResult });
+          try {
+            const authResult = await this.authenticate(message.data);
+            sendResponse({ success: true, data: authResult });
+          } catch (error) {
+            console.error('❌ Authentication failed in handler:', error);
+            sendResponse({ success: false, error: error.message });
+          }
           break;
           
         case 'GET_SETTINGS':

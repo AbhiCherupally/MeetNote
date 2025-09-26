@@ -32,12 +32,10 @@ export default function Navigation() {
             <Link href="/demo" className="text-muted-foreground hover:text-foreground transition-colors">
               Demo
             </Link>
-            <Link href="/extension">
-              <Button className="gap-2">
-                <Chrome className="w-4 h-4" />
-                Add to Chrome
-              </Button>
-            </Link>
+            <Button className="gap-2">
+              <Chrome className="w-4 h-4" />
+              Add to Chrome
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -75,12 +73,10 @@ export default function Navigation() {
                 Demo
               </Link>
               <div className="px-3 py-2">
-                <Link href="/extension">
-                  <Button className="w-full gap-2">
-                    <Chrome className="w-4 h-4" />
-                    Add to Chrome
-                  </Button>
-                </Link>
+                <Button className="w-full gap-2">
+                  <Chrome className="w-4 h-4" />
+                  Add to Chrome
+                </Button>
               </div>
             </div>
           </div>

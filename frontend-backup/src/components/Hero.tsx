@@ -5,20 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Chrome, Play, Star } from 'lucide-react'
 import Image from 'next/image'
-import ExtensionInstaller from '@/components/ExtensionInstaller'
-import BackendStatus from '@/components/BackendStatus'
 
 export default function Hero() {
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="text-center">
-        {/* Badge with Backend Status */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Badge variant="secondary" className="px-4 py-2">
-            🚀 Now available for Chrome
-          </Badge>
-          <BackendStatus />
-        </div>
+        {/* Badge */}
+        <Badge variant="secondary" className="mb-6 px-4 py-2">
+          🚀 Now available for Chrome
+        </Badge>
 
         {/* Headline */}
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
@@ -35,9 +30,16 @@ export default function Hero() {
           No separate software required.
         </p>
 
-        {/* Extension Installer */}
-        <div className="mb-12">
-          <ExtensionInstaller />
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <Button size="lg" className="gap-3 px-8 py-6 text-lg font-semibold">
+            <Chrome className="w-5 h-5" />
+            Add to Chrome - Free
+          </Button>
+          <Button variant="outline" size="lg" className="gap-3 px-8 py-6 text-lg">
+            <Play className="w-5 h-5" />
+            Watch Demo
+          </Button>
         </div>
 
         {/* Social Proof */}

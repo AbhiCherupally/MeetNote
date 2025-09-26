@@ -422,4 +422,4 @@ class MeetNoteAPI {
 }
 
 // Initialize the background service
-new MeetNoteBackground();
+new MeetNoteAPI();

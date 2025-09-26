@@ -207,24 +207,70 @@ class MeetNoteContent {
     }
   }
 
-  startRecording() {
-    // Send message to background script to start recording
-    chrome.runtime.sendMessage({
-      type: 'START_RECORDING',
-      data: {
-        platform: this.platform,
-        title: this.getMeetingTitle(),
-        participants: this.getParticipants()
+  async startRecording() {
+    console.log('🎬 Content: Starting recording process...');
+    
+    try {
+      this.showLoading('Starting recording...');
+      
+      // Content scripts can't use chrome.tabs.query, so we get info from current page
+      const currentUrl = window.location.href;
+      const meetingInfo = this.detectMeetingFromUrl(currentUrl);
+      
+      console.log('🔍 Content: Meeting detection result:', meetingInfo);
+      console.log('🌐 Content: Current URL:', currentUrl);
+      
+      if (!meetingInfo) {
+        console.error('❌ Content: No meeting detected');
+        this.showError('No meeting detected - please make sure you are in a meeting room');
+        return;
       }
-    }).then(response => {
-      if (response && !response.error) {
+
+      console.log('📤 Content: Sending START_RECORDING message to background...');
+      const recordingData = {
+        platform: meetingInfo.platform,
+        title: `${meetingInfo.name} Meeting`,
+        meetingId: this.extractMeetingId(currentUrl),
+        url: currentUrl
+      };
+      console.log('📋 Content: Recording data:', recordingData);
+
+      const response = await chrome.runtime.sendMessage({
+        type: 'START_RECORDING',
+        data: recordingData
+      });
+
+      console.log('📥 Content: Background response:', response);
+
+      if (response && response.error) {
+        console.error('❌ Content: Background returned error:', response.error);
+        this.showError(`Recording failed: ${response.error}`);
+        return;
+      }
+
+      if (response && (response.success || response.data)) {
+        console.log('✅ Content: Recording started successfully');
         this.isRecording = true;
+        this.recordingStartTime = Date.now();
         this.updateRecordingUI();
-        this.showNotification('Recording started', 'success');
+        this.startDurationTimer();
+        this.showSuccess('Recording started!');
       } else {
-        this.showNotification('Failed to start recording', 'error');
+        console.error('❌ Content: Unexpected response format:', response);
+        this.showError('Recording failed - unexpected response');
       }
-    });
+    } catch (error) {
+      console.error('❌ Content: Failed to start recording:', error);
+      console.error('📋 Content: Error details:', {
+        message: error.message,
+        stack: error.stack,
+        url: window.location.href,
+        platform: this.platform
+      });
+      this.showError(`Recording failed: ${error.message}`);
+    } finally {
+      this.hideLoading();
+    }
   }
 
   stopRecording() {
@@ -473,6 +519,77 @@ class MeetNoteContent {
     };
     
     check();
+  }
+
+  showSuccess(message) {
+    console.log('✅ Content: Success -', message);
+    this.showNotification(message, 'success');
+  }
+
+  showError(message) {
+    console.error('❌ Content: Error -', message);
+    this.showNotification(message, 'error');
+  }
+
+  showLoading(message = 'Loading...') {
+    console.log('⏳ Content: Loading -', message);
+    // Could add a loading spinner here
+  }
+
+  hideLoading() {
+    console.log('✅ Content: Loading complete');
+    // Hide loading spinner
+  }
+
+  detectMeetingFromUrl(url) {
+    const patterns = {
+      zoom: { pattern: /zoom\.us/, name: 'Zoom', platform: 'zoom' },
+      'google-meet': { pattern: /meet\.google\.com/, name: 'Google Meet', platform: 'google-meet' },
+      teams: { pattern: /teams\.microsoft\.com/, name: 'Microsoft Teams', platform: 'teams' },
+      webex: { pattern: /webex\.com/, name: 'Webex', platform: 'webex' }
+    };
+
+    for (const [key, config] of Object.entries(patterns)) {
+      if (config.pattern.test(url)) {
+        return {
+          platform: config.platform,
+          name: config.name,
+          url
+        };
+      }
+    }
+    return null;
+  }
+
+  extractMeetingId(url) {
+    console.log('🔍 Extracting meeting ID from URL:', url);
+    
+    const zoomMatch = url.match(/zoom\.us\/j\/(\d+)/);
+    if (zoomMatch) {
+      console.log('✅ Found Zoom meeting ID:', zoomMatch[1]);
+      return zoomMatch[1];
+    }
+    
+    const meetMatch = url.match(/meet\.google\.com\/([a-z-]+)/);
+    if (meetMatch) {
+      console.log('✅ Found Google Meet ID:', meetMatch[1]);
+      return meetMatch[1];
+    }
+
+    // Handle Google Meet URLs with different formats
+    const meetMatch2 = url.match(/meet\.google\.com\/([a-z0-9-]+)/i);
+    if (meetMatch2) {
+      console.log('✅ Found Google Meet ID (alt format):', meetMatch2[1]);
+      return meetMatch2[1];
+    }
+    
+    console.log('⚠️ No meeting ID found in URL');
+    return null;
+  }
+
+  startDurationTimer() {
+    console.log('⏱️ Content: Starting duration timer');
+    // Implementation for duration timer
   }
 
   // Cleanup on page unload

@@ -175,46 +175,67 @@ class MeetNoteAPI {
   }
 
   async handleMessage(message, sender, sendResponse) {
-    console.log('Background received message:', message);
+    console.log('🔥 Background received message:', message);
 
     try {
       switch (message.type) {
         case 'START_RECORDING':
-          await this.startRecording(message.data, sender.tab);
+          console.log('🎬 Attempting to start recording with data:', message.data);
+          const recordingResult = await this.startRecording(message.data, sender.tab);
+          console.log('✅ Recording started successfully:', recordingResult);
+          sendResponse({ success: true, data: recordingResult });
           break;
           
         case 'STOP_RECORDING':
-          await this.stopRecording(message.data);
+          console.log('⏹️ Attempting to stop recording');
+          const stopResult = await this.stopRecording(message.data);
+          console.log('✅ Recording stopped successfully:', stopResult);
+          sendResponse({ success: true, data: stopResult });
           break;
           
         case 'CREATE_HIGHLIGHT':
-          await this.createHighlight(message.data);
+          console.log('✨ Creating highlight:', message.data);
+          const highlightResult = await this.createHighlight(message.data);
+          sendResponse({ success: true, data: highlightResult });
           break;
           
         case 'GET_AUTH_STATUS':
+          console.log('🔐 Checking auth status');
           const authStatus = await this.getAuthStatus();
+          console.log('📋 Auth status result:', authStatus);
           sendResponse(authStatus);
           break;
           
         case 'AUTHENTICATE':
-          await this.authenticate(message.data);
+          console.log('🔑 Authenticating user:', message.data?.email);
+          const authResult = await this.authenticate(message.data);
+          sendResponse({ success: true, data: authResult });
           break;
           
         case 'GET_SETTINGS':
+          console.log('⚙️ Getting settings');
           const settings = await chrome.storage.sync.get('settings');
           sendResponse(settings.settings);
           break;
           
         case 'UPDATE_SETTINGS':
+          console.log('💾 Updating settings:', message.data);
           await chrome.storage.sync.set({ settings: message.data });
+          sendResponse({ success: true });
           break;
           
         default:
-          console.warn('Unknown message type:', message.type);
+          console.warn('⚠️ Unknown message type:', message.type);
+          sendResponse({ error: 'Unknown message type' });
       }
     } catch (error) {
-      console.error('Error handling message:', error);
-      sendResponse({ error: error.message });
+      console.error('❌ Error handling message:', error);
+      console.error('📋 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        originalMessage: message
+      });
+      sendResponse({ error: error.message, details: error.stack });
     }
 
     return true; // Keep message channel open for async response
@@ -278,12 +299,30 @@ class MeetNoteAPI {
   }
 
   async startRecording(data, tab) {
+    console.log('🎬 Starting recording process...');
+    console.log('📋 Recording data:', data);
+    console.log('🌐 Tab info:', { url: tab?.url, title: tab?.title });
+
     try {
+      // Check authentication first
+      console.log('🔐 Checking authentication...');
       const { apiToken } = await chrome.storage.sync.get('apiToken');
+      console.log('🔑 API Token status:', apiToken ? 'Found' : 'Missing');
       
       if (!apiToken) {
-        throw new Error('Not authenticated');
+        console.error('❌ No API token found - user not authenticated');
+        throw new Error('Not authenticated - please sign in to the extension first');
       }
+
+      console.log('🌐 Making API request to start recording...');
+      const requestBody = {
+        title: data.title || `Meeting on ${data.platform}`,
+        platform: data.platform,
+        meetingUrl: tab.url,
+        meetingId: data.meetingId,
+        startTime: new Date().toISOString()
+      };
+      console.log('📤 Request body:', requestBody);
 
       const response = await fetch(`${this.apiUrl}/api/meetings`, {
         method: 'POST',
@@ -291,33 +330,56 @@ class MeetNoteAPI {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiToken}`
         },
-        body: JSON.stringify({
-          title: data.title || `Meeting on ${data.platform}`,
-          platform: data.platform,
-          meetingUrl: tab.url,
-          meetingId: data.meetingId,
-          startTime: new Date().toISOString()
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('📥 API Response status:', response.status);
+      console.log('📥 API Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`Failed to start recording: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        throw new Error(`Failed to start recording: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const meeting = await response.json();
-      this.currentRecording = meeting.data;
+      console.log('✅ Meeting created successfully:', meeting);
+      
+      this.currentRecording = meeting.data || meeting;
 
-      // Show notification
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon.svg',
-        title: 'MeetNote Recording Started',
-        message: `Recording "${meeting.data.title}" in progress`
-      });
+      // Show success notification
+      if (chrome.notifications) {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon.svg',
+          title: 'MeetNote Recording Started',
+          message: `Recording "${this.currentRecording.title}" in progress`
+        });
+      }
 
-      return meeting.data;
+      console.log('🎉 Recording started successfully!');
+      return this.currentRecording;
+
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error('❌ Failed to start recording:', error);
+      console.error('📋 Full error details:', {
+        message: error.message,
+        stack: error.stack,
+        apiUrl: this.apiUrl,
+        tabUrl: tab?.url,
+        platform: data?.platform
+      });
+      
+      // Show error notification
+      if (chrome.notifications) {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon.svg',
+          title: 'Recording Failed',
+          message: error.message
+        });
+      }
+      
       throw error;
     }
   }
@@ -409,34 +471,34 @@ class MeetNoteAPI {
 
   async getAuthStatus() {
     try {
-      const { apiToken } = await chrome.storage.sync.get('apiToken');
+      console.log('🔐 Checking auth status...');
       
-      if (!apiToken) {
-        return { authenticated: false };
-      }
-
-      const response = await fetch(`${this.apiUrl}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`
-        }
+      const result = await chrome.storage.sync.get(['apiToken', 'user']);
+      console.log('📋 Storage check:', { 
+        hasToken: !!result.apiToken, 
+        hasUser: !!result.user 
       });
-
-      if (response.ok) {
-        const user = await response.json();
-        return { authenticated: true, user: user.data.user };
-      } else {
-        // Token is invalid, clear it
-        await chrome.storage.sync.remove('apiToken');
+      
+      if (!result.apiToken || !result.user) {
+        console.log('❌ No token or user found in storage');
         return { authenticated: false };
       }
+
+      console.log('✅ User authenticated:', result.user);
+      return { 
+        authenticated: true, 
+        user: result.user 
+      };
     } catch (error) {
-      console.error('Failed to check auth status:', error);
+      console.error('❌ Failed to check auth status:', error);
       return { authenticated: false };
     }
   }
 
   async authenticate(credentials) {
     try {
+      console.log('🔐 Authenticating with credentials:', { email: credentials.email });
+      
       const response = await fetch(`${this.apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -445,21 +507,29 @@ class MeetNoteAPI {
         body: JSON.stringify(credentials)
       });
 
+      console.log('📥 Auth response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ Auth error response:', errorText);
+        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
       }
 
       const auth = await response.json();
+      console.log('✅ Auth successful:', { success: auth.success, user: auth.user });
       
-      // Store token and user info
+      // Store token and user info - backend returns token and user directly, not nested under data
       await chrome.storage.sync.set({
-        apiToken: auth.data.token,
-        user: auth.data.user
+        apiToken: auth.token,
+        user: auth.user
       });
 
-      return auth.data;
+      return {
+        token: auth.token,
+        user: auth.user
+      };
     } catch (error) {
-      console.error('Authentication failed:', error);
+      console.error('❌ Authentication failed:', error);
       throw error;
     }
   }

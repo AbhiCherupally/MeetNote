@@ -454,12 +454,44 @@ io.on('connection', (socket) => {
 // Server startup
 const PORT = process.env.PORT || 10000;
 
-server.listen(PORT, '0.0.0.0', () => {
+// Create demo user for testing
+const createDemoUser = async () => {
+  try {
+    // Create multiple admin accounts for testing
+    const adminAccounts = [
+      { email: 'abhi@meetnote.app', name: 'Abhi', password: 'admin123' },
+      { email: 'sree@meetnote.app', name: 'Sree', password: 'admin123' },
+      { email: 'surya@meetnote.app', name: 'Surya', password: 'admin123' },
+      { email: 'swathi@meetnote.app', name: 'Swathi', password: 'admin123' }
+    ];
+
+    for (const account of adminAccounts) {
+      const hashedPassword = await bcrypt.hash(account.password, 10);
+      const user = {
+        id: userIdCounter++,
+        email: account.email,
+        name: account.name,
+        password: hashedPassword,
+        role: 'admin',
+        createdAt: new Date().toISOString()
+      };
+      users.set(user.id, user);
+      console.log(`✅ Admin account created: ${account.email} / ${account.password}`);
+    }
+  } catch (error) {
+    console.error('Failed to create admin accounts:', error);
+  }
+};
+
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 MeetNote API server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔑 OpenRouter API: ${process.env.OPENROUTER_API_KEY ? 'Configured' : 'Not configured'}`);
   console.log(`🎤 AssemblyAI API: ${process.env.ASSEMBLYAI_API_KEY ? 'Configured' : 'Not configured'}`);
+  
+  // Create demo user
+  await createDemoUser();
 });
 
 // Graceful shutdown

@@ -135,14 +135,13 @@ class MeetNoteContent {
     
     const controlsHtml = `
       <div id="meetnote-controls" class="meetnote-floating-controls">
-        <div class="meetnote-control-button" id="meetnote-record-btn">
+        <div class="meetnote-control-button" id="meetnote-record-btn" data-tooltip="Start Recording">
           <span class="meetnote-icon">●</span>
-          <span class="meetnote-text">Record</span>
         </div>
-        <div class="meetnote-control-button" id="meetnote-highlight-btn">
+        <div class="meetnote-control-button" id="meetnote-highlight-btn" data-tooltip="Create Highlight">
           <span class="meetnote-icon">✨</span>
         </div>
-        <div class="meetnote-control-button" id="meetnote-transcript-btn">
+        <div class="meetnote-control-button" id="meetnote-transcript-btn" data-tooltip="Toggle Transcript">
           <span class="meetnote-icon">📝</span>
         </div>
       </div>
@@ -375,16 +374,12 @@ class MeetNoteContent {
 
     if (this.isRecording) {
       recordBtn?.classList.add('meetnote-recording');
+      recordBtn?.setAttribute('data-tooltip', 'Stop Recording');
       platformBtns.forEach(btn => btn.classList.add('meetnote-recording'));
-      
-      const recordText = recordBtn?.querySelector('.meetnote-text');
-      if (recordText) recordText.textContent = 'Stop';
     } else {
       recordBtn?.classList.remove('meetnote-recording');
+      recordBtn?.setAttribute('data-tooltip', 'Start Recording');
       platformBtns.forEach(btn => btn.classList.remove('meetnote-recording'));
-      
-      const recordText = recordBtn?.querySelector('.meetnote-text');
-      if (recordText) recordText.textContent = 'Record';
     }
   }
 

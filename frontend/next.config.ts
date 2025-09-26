@@ -10,26 +10,6 @@ const nextConfig: NextConfig = {
   
   images: {
     unoptimized: true, // Required for static export
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: '**',
-      },
-    ],
-  },
-  
-  // Disable features not compatible with static export
-  experimental: {
-    appDir: true,
-  },
-  
-  // Environment variables  
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://meetnote.onrender.com',
   }
 };
 

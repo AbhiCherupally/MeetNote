@@ -1,20 +1,17 @@
 # Netlify Deployment Configuration
 
-# Build Command
-command = "npm run build"
-
-# Publish Directory  
-publish = "out"
-
-# Environment Variables
-[build.environment]
-  NEXT_PUBLIC_API_URL = "https://meetnote.onrender.com"
+[build]
+  # Build Command
+  command = "npm run build"
   
-# Redirects for SPA routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  # Publish Directory for Next.js static export
+  publish = "out"
+
+  # Environment Variables
+  [build.environment]
+    NEXT_PUBLIC_API_URL = "https://meetnote.onrender.com"
+  
+# No redirects needed for static export - Netlify serves files directly
 
 # Headers for security
 [[headers]]

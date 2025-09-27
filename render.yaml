@@ -1,11 +1,19 @@
 services:
   - type: web
-    name: meetnote-backend
-    env: node
+    name: meetnote-python-backend
+    env: docker
     region: oregon
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && node server.js
-    healthCheckPath: /health
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
     envVars:
-      - key: NODE_ENV
+      - key: ENVIRONMENT
         value: production
+      - key: PORT
+        value: 10000
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+    scaling:
+      minInstances: 1
+      maxInstances: 2

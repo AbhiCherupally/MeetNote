@@ -1,363 +1,295 @@
-/* MeetNote Content Script Styles - Modern Aesthetic Design */
+/* MeetNote Content Script Styles */
 
-/* Floating Controls - Minimalist Design */
+/* Floating Controls */
 .meetnote-floating-controls {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 20px;
+  right: 20px;
   z-index: 10000;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 
-              0 2px 8px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(24px);
+  flex-direction: column;
+  gap: 8px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.meetnote-floating-controls:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.92));
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 
-              0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-/* Individual Control Buttons */
 .meetnote-control-button {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  color: #64748b;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  min-width: 100px;
+  justify-content: center;
 }
 
 .meetnote-control-button:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  transform: scale(1.1);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
 }
 
-.meetnote-control-button:active {
-  transform: scale(0.95);
-}
-
-/* Record Button - Special Styling */
-#meetnote-record-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+.meetnote-control-button.meetnote-recording {
+  background: rgba(239, 68, 68, 0.95);
   color: white;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  border-color: rgba(239, 68, 68, 0.3);
+  animation: meetnote-pulse 2s infinite;
 }
 
-#meetnote-record-btn:hover {
-  background: linear-gradient(135deg, #5a67d8, #6b46c1);
-  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.4);
-  color: white;
-}
-
-#meetnote-record-btn.meetnote-recording {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-  animation: meetnote-pulse-record 2s infinite;
-}
-
-@keyframes meetnote-pulse-record {
+@keyframes meetnote-pulse {
   0%, 100% {
-    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4), 0 0 0 0 rgba(239, 68, 68, 0.4);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3), 0 0 0 0 rgba(239, 68, 68, 0.4);
   }
   50% {
-    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4), 0 0 0 8px rgba(239, 68, 68, 0);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3), 0 0 0 8px rgba(239, 68, 68, 0);
   }
 }
 
-/* Icon Styling */
 .meetnote-icon {
-  font-size: 18px;
+  font-size: 16px;
+}
+
+.meetnote-text {
+  font-size: 13px;
   font-weight: 600;
 }
 
-/* Tooltip for buttons */
-.meetnote-control-button::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: -36px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(31, 41, 55, 0.9);
+/* Platform Integration Buttons */
+.meetnote-platform-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #667eea;
   color: white;
-  padding: 6px 10px;
+  border: none;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 4px;
 }
 
-.meetnote-control-button:hover::after {
-  opacity: 1;
+.meetnote-platform-btn:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
 }
 
-/* Transcript Overlay - Modern Card Design */
+.meetnote-platform-btn.meetnote-recording {
+  background: #ef4444;
+  animation: meetnote-pulse-btn 2s infinite;
+}
+
+@keyframes meetnote-pulse-btn {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.meetnote-btn-icon {
+  font-size: 14px;
+}
+
+.meetnote-btn-text {
+  font-size: 12px;
+}
+
+/* Transcript Overlay */
 .meetnote-transcript-overlay {
   position: fixed;
-  top: 24px;
-  right: 24px;
-  width: 380px;
-  max-height: 480px;
+  top: 20px;
+  right: 20px;
+  width: 350px;
+  max-height: 400px;
   background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.15), 
-              0 8px 24px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(32px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
   z-index: 10001;
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   overflow: hidden;
-  animation: meetnote-slide-down 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes meetnote-slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .meetnote-transcript-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 16px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05));
+  padding: 12px 16px;
+  background: rgba(102, 126, 234, 0.1);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 .meetnote-transcript-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1f2937;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
 }
 
 .meetnote-transcript-close {
-  background: rgba(107, 114, 128, 0.1);
+  background: none;
   border: none;
-  font-size: 16px;
+  font-size: 18px;
   color: #6b7280;
   cursor: pointer;
-  width: 32px;
-  height: 32px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 4px;
   transition: all 0.2s ease;
 }
 
 .meetnote-transcript-close:hover {
-  background: rgba(107, 114, 128, 0.2);
+  background: rgba(107, 114, 128, 0.1);
   color: #374151;
-  transform: scale(1.1);
 }
 
 .meetnote-transcript-content {
   flex: 1;
-  padding: 0 24px 24px;
+  padding: 16px;
   overflow-y: auto;
-  max-height: 400px;
+  max-height: 320px;
 }
 
 .meetnote-transcript-message {
   text-align: center;
-  color: #9ca3af;
-  font-size: 14px;
-  padding: 40px 20px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), transparent);
-  border-radius: 12px;
-  margin: 8px 0;
+  color: #6b7280;
+  font-size: 13px;
+  font-style: italic;
+  padding: 20px;
 }
 
 .meetnote-transcript-line {
-  margin-bottom: 16px;
-  padding: 16px;
-  background: rgba(248, 250, 252, 0.6);
-  border-radius: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 6px;
   border-left: 3px solid #667eea;
-  transition: all 0.2s ease;
-}
-
-.meetnote-transcript-line:hover {
-  background: rgba(248, 250, 252, 0.9);
-  transform: translateX(4px);
 }
 
 .meetnote-transcript-speaker {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   color: #667eea;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  display: block;
+  margin-bottom: 2px;
 }
 
 .meetnote-transcript-text {
-  font-size: 14px;
+  font-size: 13px;
   color: #374151;
-  line-height: 1.6;
+  line-height: 1.4;
 }
 
-/* Notifications - Elegant Toast Style */
+/* Notifications */
 .meetnote-notification {
   position: fixed;
-  top: 24px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10002;
-  padding: 16px 24px;
-  border-radius: 12px;
+  padding: 12px 20px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: white;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(16px);
-  animation: meetnote-notification-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  max-width: 320px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  animation: meetnote-slide-in 0.3s ease;
+  max-width: 300px;
   text-align: center;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
-@keyframes meetnote-notification-in {
+@keyframes meetnote-slide-in {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-30px) scale(0.9);
+    transform: translateX(-50%) translateY(-20px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
 .meetnote-notification-success {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: rgba(34, 197, 94, 0.95);
 }
 
 .meetnote-notification-error {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: rgba(239, 68, 68, 0.95);
 }
 
 .meetnote-notification-warning {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: rgba(245, 158, 11, 0.95);
 }
 
 .meetnote-notification-info {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: rgba(59, 130, 246, 0.95);
 }
 
-/* Platform Integration - Seamless Buttons */
-.meetnote-platform-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  margin: 0 6px;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+/* Platform-specific adjustments */
+
+/* Zoom */
+body[data-platform="zoom"] .meetnote-floating-controls {
+  bottom: 80px; /* Avoid Zoom toolbar */
 }
 
-.meetnote-platform-btn:hover {
-  background: linear-gradient(135deg, #5a67d8, #6b46c1);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.4);
+/* Google Meet */
+body[data-platform="meet"] .meetnote-floating-controls {
+  bottom: 100px; /* Avoid Meet toolbar */
 }
 
-.meetnote-platform-btn.meetnote-recording {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-  animation: meetnote-pulse-platform 2s infinite;
-}
-
-@keyframes meetnote-pulse-platform {
-  0%, 100% { 
-    opacity: 1; 
-    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-  }
-  50% { 
-    opacity: 0.9; 
-    box-shadow: 0 6px 24px rgba(239, 68, 68, 0.6);
-  }
+/* Teams */
+body[data-platform="teams"] .meetnote-floating-controls {
+  bottom: 90px; /* Avoid Teams toolbar */
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .meetnote-transcript-overlay {
-    width: calc(100vw - 48px);
-    max-width: 350px;
-    max-height: 400px;
+    width: 300px;
+    max-height: 300px;
   }
   
   .meetnote-floating-controls {
-    bottom: 16px;
-    right: 16px;
-    padding: 10px 12px;
+    bottom: 15px;
+    right: 15px;
   }
   
   .meetnote-control-button {
-    width: 40px;
-    height: 40px;
+    min-width: 80px;
+    padding: 8px 10px;
   }
   
-  .meetnote-icon {
-    font-size: 16px;
+  .meetnote-text {
+    display: none; /* Hide text on mobile, show only icons */
   }
 }
 
-/* Dark Theme Support */
+/* Dark theme support */
 @media (prefers-color-scheme: dark) {
-  .meetnote-floating-controls {
-    background: linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(31, 41, 55, 0.85));
+  .meetnote-control-button {
+    background: rgba(31, 41, 55, 0.95);
+    color: #f3f4f6;
     border-color: rgba(255, 255, 255, 0.1);
   }
   
-  .meetnote-floating-controls:hover {
-    background: linear-gradient(135deg, rgba(31, 41, 55, 0.98), rgba(31, 41, 55, 0.92));
-  }
-  
-  .meetnote-control-button {
-    color: #9ca3af;
-  }
-  
   .meetnote-control-button:hover {
-    background: rgba(102, 126, 234, 0.2);
-    color: #a5b4fc;
+    background: rgba(31, 41, 55, 1);
   }
   
   .meetnote-transcript-overlay {
@@ -366,16 +298,25 @@
   }
   
   .meetnote-transcript-header {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1));
+    background: rgba(102, 126, 234, 0.2);
+    border-bottom-color: rgba(102, 126, 234, 0.3);
   }
   
   .meetnote-transcript-title {
     color: #f3f4f6;
-    -webkit-text-fill-color: transparent;
+  }
+  
+  .meetnote-transcript-close {
+    color: #9ca3af;
+  }
+  
+  .meetnote-transcript-close:hover {
+    background: rgba(156, 163, 175, 0.2);
+    color: #f3f4f6;
   }
   
   .meetnote-transcript-line {
-    background: rgba(55, 65, 81, 0.4);
+    background: rgba(55, 65, 81, 0.5);
   }
   
   .meetnote-transcript-text {
@@ -384,29 +325,5 @@
   
   .meetnote-transcript-message {
     color: #9ca3af;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), transparent);
   }
-}
-
-/* Smooth Scroll for Transcript */
-.meetnote-transcript-content {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(102, 126, 234, 0.3) transparent;
-}
-
-.meetnote-transcript-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.meetnote-transcript-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.meetnote-transcript-content::-webkit-scrollbar-thumb {
-  background: rgba(102, 126, 234, 0.3);
-  border-radius: 3px;
-}
-
-.meetnote-transcript-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 126, 234, 0.5);
 }

@@ -9,9 +9,79 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
-require('dotenv').config();
+require('dotenv').co// Socket.IO real-time communication
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+  
+  socket.on('join-meeting', (meetingId) => {
+    socket.join(`meeting-${meetingId}`);
+    console.log(`Client ${socket.id} joined meeting ${meetingId}`);
+  });
+  
+  // Real-time transcription handling
+  socket.on('start-transcription', async (data) => {
+    try {
+      console.log(`🎤 Starting transcription for meeting ${data.meetingId}`);
+      
+      const transcriber = await transcriptionService.startRealtimeTranscription(data.meetingId);
+      
+      // Listen for transcription updates
+      transcriber.on('transcript', (transcript) => {
+        const transcriptData = {
+          meetingId: data.meetingId,
+          type: transcript.message_type,
+          text: transcript.text,
+          confidence: transcript.confidence,
+          timestamp: Date.now()
+        };
+        
+        // Send to all clients in the meeting room
+        io.to(`meeting-${data.meetingId}`).emit('transcript-update', transcriptData);
+        
+        // Send to extension
+        socket.emit('transcript-update', transcriptData);
+      });
+      
+      socket.emit('transcription-started', { meetingId: data.meetingId });
+      
+    } catch (error) {
+      console.error('❌ Failed to start transcription:', error);
+      socket.emit('transcription-error', { error: error.message });
+    }
+  });
 
-const app = express();
+  socket.on('audio-data', async (data) => {
+    try {
+      // Forward audio data to transcription service
+      await transcriptionService.sendAudioData(data.meetingId, data.audioBuffer);
+    } catch (error) {
+      console.error('❌ Error processing audio data:', error);
+    }
+  });
+
+  socket.on('stop-transcription', async (data) => {
+    try {
+      console.log(`⏹️ Stopping transcription for meeting ${data.meetingId}`);
+      
+      const finalTranscript = await transcriptionService.stopRealtimeTranscription(data.meetingId);
+      
+      if (finalTranscript) {
+        socket.emit('transcription-completed', finalTranscript);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error stopping transcription:', error);
+    }
+  });
+  
+  socket.on('transcript-data', (data) => {
+    socket.to(`meeting-${data.meetingId}`).emit('transcript-update', data);
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});p = express();
 const server = createServer(app);
 
 // Socket.IO setup
@@ -340,26 +410,77 @@ app.post('/api/meetings/:id/start', verifyToken, (req, res) => {
   });
 });
 
-app.post('/api/meetings/:id/end', verifyToken, (req, res) => {
-  const meetingId = parseInt(req.params.id);
-  const meeting = meetings.get(meetingId);
-  
-  if (!meeting || meeting.userId !== req.user.userId) {
-    return res.status(404).json({
+app.post('/api/meetings/:id/end', verifyToken, async (req, res) => {
+  try {
+    const meetingId = parseInt(req.params.id);
+    const { transcript, duration, endTime } = req.body;
+    
+    const meeting = meetings.get(meetingId);
+    
+    if (!meeting || meeting.userId !== req.user.userId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Meeting not found'
+      });
+    }
+
+    // Stop real-time transcription if active
+    let finalTranscript = null;
+    if (transcriptionService.isTranscriptionActive(meetingId)) {
+      console.log(`⏹️ Stopping active transcription for meeting ${meetingId}`);
+      finalTranscript = await transcriptionService.stopRealtimeTranscription(meetingId);
+    }
+
+    // Update meeting
+    meeting.status = 'completed';
+    meeting.endTime = endTime || new Date().toISOString();
+    meeting.duration = duration;
+    
+    // Use real transcript if available
+    const transcriptText = finalTranscript?.fullTranscript || transcript || 'Meeting completed successfully.';
+    meeting.transcript = transcriptText;
+
+    // Generate AI analysis
+    const analysis = await generateAISummary(transcriptText);
+    meeting.summary = analysis.summary;
+    meeting.actionItems = analysis.actionItems;
+    meeting.keyPoints = analysis.keyPoints;
+
+    // Add transcription metadata
+    if (finalTranscript) {
+      meeting.transcriptionData = {
+        confidence: finalTranscript.chunks?.length ? 
+          finalTranscript.chunks.reduce((sum, chunk) => sum + (chunk.confidence || 0), 0) / finalTranscript.chunks.length : 0,
+        speakers: [...new Set(finalTranscript.chunks?.map(c => c.speaker) || [])],
+        chunkCount: finalTranscript.chunks?.length || 0,
+        realTimeDuration: finalTranscript.duration
+      };
+    }
+
+    meetings.set(meetingId, meeting);
+    
+    res.json({
+      success: true,
+      message: 'Meeting ended and processed successfully',
+      data: {
+        ...meeting,
+        hasRealTranscription: !!finalTranscript
+      }
+    });
+  } catch (error) {
+    console.error('Failed to end meeting:', error);
+    res.status(500).json({
       success: false,
-      message: 'Meeting not found'
+      message: 'Failed to end meeting'
     });
   }
-  
-  meeting.status = 'completed';
-  meeting.endedAt = new Date().toISOString();
-  meetings.set(meetingId, meeting);
-  
-  res.json({
-    success: true,
-    message: 'Meeting ended',
-    meeting
-  });
+});
+
+// Add alias for stop endpoint (extension compatibility)
+app.post('/api/meetings/:id/stop', verifyToken, async (req, res) => {
+  // Redirect to end endpoint
+  req.url = req.url.replace('/stop', '/end');
+  return app._router.handle(req, res);
 });
 
 app.post('/api/meetings/:id/analyze', verifyToken, async (req, res) => {
@@ -437,17 +558,88 @@ app.use('*', (req, res) => {
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
   
-  socket.on('join-meeting', (meetingId) => {
+  socket.on('join-meeting', async (meetingId) => {
     socket.join(`meeting-${meetingId}`);
+    socket.meetingId = meetingId;
     console.log(`Client ${socket.id} joined meeting ${meetingId}`);
   });
   
+  socket.on('start-transcription', async (data) => {
+    try {
+      const { meetingId } = data;
+      console.log(`Starting real-time transcription for meeting ${meetingId}`);
+      
+      // Start AssemblyAI real-time transcription
+      const transcriptionSession = await transcriptionService.startRealtimeTranscription({
+        onTranscript: (transcript) => {
+          const transcriptData = {
+            meetingId,
+            speaker: transcript.speaker || 'Unknown',
+            text: transcript.text,
+            timestamp: new Date().toISOString(),
+            confidence: transcript.confidence
+          };
+          
+          // Emit to all clients in the meeting
+          io.to(`meeting-${meetingId}`).emit('transcript-update', transcriptData);
+          console.log(`Transcript: ${transcript.text}`);
+        },
+        onError: (error) => {
+          console.error('Transcription error:', error);
+          io.to(`meeting-${meetingId}`).emit('transcription-error', { error: error.message });
+        }
+      });
+      
+      // Store session for this socket
+      socket.transcriptionSession = transcriptionSession;
+      socket.emit('transcription-started', { meetingId });
+      
+    } catch (error) {
+      console.error('Failed to start transcription:', error);
+      socket.emit('transcription-error', { error: error.message });
+    }
+  });
+  
+  socket.on('audio-data', async (audioData) => {
+    try {
+      if (socket.transcriptionSession) {
+        // Send audio data to AssemblyAI
+        socket.transcriptionSession.sendAudio(audioData);
+      }
+    } catch (error) {
+      console.error('Error sending audio data:', error);
+    }
+  });
+  
+  socket.on('stop-transcription', async () => {
+    try {
+      if (socket.transcriptionSession) {
+        await socket.transcriptionSession.close();
+        socket.transcriptionSession = null;
+        console.log(`Stopped transcription for meeting ${socket.meetingId}`);
+        socket.emit('transcription-stopped');
+      }
+    } catch (error) {
+      console.error('Error stopping transcription:', error);
+    }
+  });
+  
   socket.on('transcript-data', (data) => {
+    // Keep backward compatibility for now
     socket.to(`meeting-${data.meetingId}`).emit('transcript-update', data);
   });
   
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log('Client disconnected:', socket.id);
+    
+    // Clean up transcription session
+    if (socket.transcriptionSession) {
+      try {
+        await socket.transcriptionSession.close();
+      } catch (error) {
+        console.error('Error closing transcription session:', error);
+      }
+    }
   });
 });
 

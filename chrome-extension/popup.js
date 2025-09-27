@@ -133,7 +133,12 @@ class MeetNotePopup {
       // Get current active tab
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
-      if (!activeTab) return;
+      if (!activeTab || !activeTab.url) {
+        console.warn('No active tab or URL found');
+        this.showNoMeeting();
+        this.disableRecordingControls();
+        return;
+      }
 
       // Check if current tab is a meeting platform
       const meetingInfo = this.detectMeetingFromUrl(activeTab.url);
@@ -206,9 +211,9 @@ class MeetNotePopup {
     try {
       this.showLoading('Signing in...');
       
-      console.log('📤 Sending authentication request to background...');
+      console.log('📤 Sending login request to background...');
       const response = await chrome.runtime.sendMessage({
-        type: 'AUTHENTICATE',
+        type: 'LOGIN',
         data: { email, password }
       });
 
@@ -258,35 +263,74 @@ class MeetNotePopup {
     try {
       this.showLoading('Starting recording...');
       
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      const meetingInfo = this.detectMeetingFromUrl(activeTab.url);
+      // First check authentication
+      const authResponse = await chrome.runtime.sendMessage({ type: 'CHECK_AUTH' });
+      if (!authResponse || !authResponse.authenticated) {
+        this.showError('Please log in first');
+        return;
+      }
       
+      // Get active tab with better error handling
+      let activeTab;
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        activeTab = tabs[0];
+      } catch (tabError) {
+        console.error('Failed to get active tab:', tabError);
+        this.showError('Unable to access current tab');
+        return;
+      }
+      
+      if (!activeTab || !activeTab.url) {
+        this.showError('No active tab found - please ensure you are on a meeting page');
+        return;
+      }
+      
+      console.log('📋 Current tab:', { url: activeTab.url, title: activeTab.title });
+      
+      const meetingInfo = this.detectMeetingFromUrl(activeTab.url);
       if (!meetingInfo) {
-        this.showError('No meeting detected');
+        this.showError('No meeting detected - please join a meeting first (Zoom, Google Meet, Teams, or Webex)');
         return;
       }
 
+      console.log('🎬 Starting recording for:', meetingInfo);
+      
       const response = await chrome.runtime.sendMessage({
         type: 'START_RECORDING',
         data: {
           platform: meetingInfo.platform,
           title: `${meetingInfo.name} Meeting`,
-          meetingId: this.extractMeetingId(activeTab.url)
+          meetingId: this.extractMeetingId(activeTab.url),
+          url: activeTab.url
         }
       });
 
-      if (response && !response.error) {
+      console.log('🎬 Recording response:', response);
+
+      if (response && response.success) {
         this.isRecording = true;
         this.recordingStartTime = Date.now();
         this.updateRecordingUI();
         this.startDurationTimer();
-        this.showSuccess('Recording started!');
+        this.showSuccess('Recording started successfully!');
+        
+        // Inject transcript overlay into the page
+        try {
+          chrome.tabs.sendMessage(activeTab.id, {
+            type: 'START_TRANSCRIPT',
+            data: { recordingId: response.data?.recordingId }
+          });
+        } catch (contentError) {
+          console.log('Content script injection failed:', contentError);
+          // Don't show error to user as this is optional
+        }
       } else {
         this.showError(response?.error || 'Failed to start recording');
       }
     } catch (error) {
       console.error('Failed to start recording:', error);
-      this.showError('Failed to start recording');
+      this.showError(`Recording failed: ${error.message}`);
     } finally {
       this.hideLoading();
     }
@@ -299,23 +343,52 @@ class MeetNotePopup {
       const duration = this.recordingStartTime ? 
         Math.floor((Date.now() - this.recordingStartTime) / 1000) : 0;
 
+      console.log('⏹️ Stopping recording, duration:', duration);
+
       const response = await chrome.runtime.sendMessage({
         type: 'STOP_RECORDING',
         data: { duration }
       });
 
-      if (response && !response.error) {
+      console.log('⏹️ Stop recording response:', response);
+
+      // Handle both successful stop and "no active recording" cases as success
+      if (response && (response.success || response.data)) {
         this.isRecording = false;
         this.recordingStartTime = null;
         this.updateRecordingUI();
         this.stopDurationTimer();
-        this.showSuccess('Recording stopped and processing...');
+        
+        if (response.data && response.data.message && response.data.message.includes('No active recording')) {
+          this.showSuccess('Recording already stopped');
+        } else {
+          this.showSuccess('Recording stopped successfully!');
+        }
+        
+        // Stop transcript overlay
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (activeTab) {
+          chrome.tabs.sendMessage(activeTab.id, {
+            type: 'STOP_TRANSCRIPT'
+          }).catch(err => console.log('Content script not available:', err));
+        }
       } else {
-        this.showError(response?.error || 'Failed to stop recording');
+        console.warn('⚠️ Stop recording response not successful:', response);
+        // Even if API fails, update UI state
+        this.isRecording = false;
+        this.recordingStartTime = null;
+        this.updateRecordingUI();
+        this.stopDurationTimer();
+        this.showError(response?.error || 'Recording may not have stopped properly');
       }
     } catch (error) {
       console.error('Failed to stop recording:', error);
-      this.showError('Failed to stop recording');
+      // Force UI update even on error
+      this.isRecording = false;
+      this.recordingStartTime = null;
+      this.updateRecordingUI();
+      this.stopDurationTimer();
+      this.showError(`Stop recording failed: ${error.message}`);
     } finally {
       this.hideLoading();
     }
@@ -365,7 +438,7 @@ class MeetNotePopup {
   }
 
   viewMeetings() {
-    this.openUrl('https://app.meetnote.com/meetings');
+    this.openUrl('https://meetnoteapp.netlify.app/meetings');
   }
 
   shareRecording() {

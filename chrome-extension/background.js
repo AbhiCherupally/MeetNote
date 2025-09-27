@@ -1,91 +1,90 @@
-// Background service worker for MeetNote extension
-class MeetNoteAPI {
+// MeetNote Chrome Extension Background Service Worker
+// Connects to Python FastAPI backend for real-time transcription
+
+class MeetNoteBackgroundService {
   constructor() {
-    this.apiUrl = 'https://meetnote.onrender.com';
-    this.currentRecording = null;
+    // Use your actual Render deployment URL
+    this.apiUrl = 'https://meetnote.onrender.com'; // Your actual Render backend
+    this.wsUrl = 'wss://meetnote.onrender.com/ws'; // Your actual WebSocket URL
+    
+    // For development, uncomment these lines:
+    // this.apiUrl = 'http://localhost:8000';
+    // this.wsUrl = 'ws://localhost:8000/ws';
+    
+    this.isRecording = false;
+    this.activeSocket = null;
+    this.currentMeetingId = null;
+    this.audioRecorder = null;
+    this.currentRecordingData = null;
+    this.mediaStream = null;
+    this.clientId = this.generateClientId();
+    
     this.init();
   }
 
+  generateClientId() {
+    return 'client_' + Math.random().toString(36).substr(2, 9);
+  }
+
   init() {
-    try {
-      console.log('MeetNote background service worker initializing...');
-      
-      // Extension installation/update handler
-      if (chrome.runtime && chrome.runtime.onInstalled) {
-        chrome.runtime.onInstalled.addListener(this.handleInstalled.bind(this));
-      }
-      
-      // Tab update listener for meeting detection
-      if (chrome.tabs && chrome.tabs.onUpdated) {
-        chrome.tabs.onUpdated.addListener(this.handleTabUpdate.bind(this));
-      }
-      
-      // Message listener for content script communication
-      if (chrome.runtime && chrome.runtime.onMessage) {
-        chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-      }
-      
-      // Command listener for keyboard shortcuts
-      if (chrome.commands && chrome.commands.onCommand) {
-        chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
-      }
-      
-      // Context menu creation
-      this.createContextMenus();
-      
-      console.log('✅ MeetNote background service worker initialized successfully');
-      
-      // Test API connectivity
-      this.testAPIConnection();
-    } catch (error) {
-      console.error('❌ Failed to initialize MeetNote background script:', error);
+    console.log('🚀 MeetNote Background Service initializing...');
+    
+    // Extension event listeners
+    if (chrome.runtime && chrome.runtime.onInstalled) {
+      chrome.runtime.onInstalled.addListener(this.handleInstalled.bind(this));
     }
+    
+    if (chrome.tabs && chrome.tabs.onUpdated) {
+      chrome.tabs.onUpdated.addListener(this.handleTabUpdate.bind(this));
+    }
+    
+    // Message listener for content script communication
+    if (chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        this.handleMessage(message, sender, sendResponse);
+        return true; // Keep message channel open for async response
+      });
+    }
+    
+    // Command listener for keyboard shortcuts
+    if (chrome.commands && chrome.commands.onCommand) {
+      chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
+    }
+
+    // Test API connection
+    this.testAPIConnection();
   }
 
   async testAPIConnection() {
     try {
-      console.log('🔗 Testing API connection to:', this.apiUrl);
-      const response = await fetch(`${this.apiUrl}/health`);
+      const response = await fetch(`${this.apiUrl}/api/health`);
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ API connection successful:', data);
+        const health = await response.json();
+        console.log('✅ Backend connection successful:', health);
       } else {
-        console.error('❌ API connection failed:', response.status);
+        console.warn('⚠️ Backend health check failed:', response.status);
       }
     } catch (error) {
-      console.error('❌ API connection error:', error);
+      console.warn('⚠️ Backend connection failed:', error.message);
+      console.log('📝 Make sure Python backend is running on localhost:8000');
     }
   }
 
   async handleInstalled(details) {
-    if (details.reason === 'install') {
-      // First time installation
-      await this.initializeExtension();
-      chrome.tabs.create({ url: 'options.html' });
-    } else if (details.reason === 'update') {
-      // Extension update
-      console.log('MeetNote extension updated to version:', chrome.runtime.getManifest().version);
-    }
+    console.log('📦 Extension installed/updated:', details);
+    await this.initializeExtension();
+    this.createContextMenus();
   }
 
   async initializeExtension() {
     try {
-      // Set default settings
-      await chrome.storage.sync.set({
-        settings: {
-          autoRecord: false,
-          overlayPosition: 'bottom-right',
-          transcriptLanguage: 'en-US',
-          autoHighlight: true,
-          notifications: true
-        },
-        user: null,
-        apiToken: null
-      });
+      // Set default badge
+      await chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+      await chrome.action.setBadgeText({ text: 'OFF' });
       
-      console.log('Extension initialized with default settings');
+      console.log('✅ Extension initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize extension:', error);
+      console.error('❌ Extension initialization failed:', error);
     }
   }
 
@@ -94,7 +93,7 @@ class MeetNoteAPI {
       const meetingInfo = this.detectMeetingPlatform(tab.url);
       
       if (meetingInfo) {
-        console.log('Meeting platform detected:', meetingInfo);
+        console.log('🎥 Meeting platform detected:', meetingInfo);
         
         // Update extension badge
         await this.updateBadge(tabId, meetingInfo.platform);
@@ -106,373 +105,405 @@ class MeetNoteAPI {
             files: ['content.js']
           });
         } catch (error) {
-          console.log('Content script already injected or failed:', error);
+          console.log('Content script already injected or failed:', error.message);
         }
         
         // Send meeting detection notification to content script
-        chrome.tabs.sendMessage(tabId, {
-          type: 'MEETING_DETECTED',
-          platform: meetingInfo.platform,
-          meetingId: meetingInfo.meetingId,
-          url: tab.url
-        });
+        try {
+          chrome.tabs.sendMessage(tabId, {
+            type: 'MEETING_DETECTED',
+            platform: meetingInfo.platform,
+            meetingId: meetingInfo.meetingId,
+            url: tab.url
+          });
+        } catch (error) {
+          console.log('Failed to send meeting detection message:', error.message);
+        }
       }
     }
   }
 
   detectMeetingPlatform(url) {
-    const patterns = {
-      zoom: {
-        pattern: /zoom\.us\/j\/(\d+)/,
-        name: 'Zoom'
-      },
-      'google-meet': {
-        pattern: /meet\.google\.com\/([a-z-]+)/,
-        name: 'Google Meet'
-      },
-      teams: {
-        pattern: /teams\.microsoft\.com/,
-        name: 'Microsoft Teams'
-      },
-      webex: {
-        pattern: /webex\.com/,
-        name: 'Webex'
-      }
-    };
+    const platforms = [
+      { name: 'zoom', pattern: /zoom\.us\/j\//, extract: /\/j\/(\d+)/ },
+      { name: 'meet', pattern: /meet\.google\.com\//, extract: /meet\.google\.com\/([a-z-]+)/ },
+      { name: 'teams', pattern: /teams\.microsoft\.com\//, extract: /teams\.microsoft\.com.*\/([a-zA-Z0-9-]+)/ },
+      { name: 'webex', pattern: /webex\.com\//, extract: /webex\.com.*\/([a-zA-Z0-9-]+)/ }
+    ];
 
-    for (const [platform, config] of Object.entries(patterns)) {
-      const match = url.match(config.pattern);
-      if (match) {
+    for (const platform of platforms) {
+      if (platform.pattern.test(url)) {
+        const match = url.match(platform.extract);
         return {
-          platform,
-          name: config.name,
-          meetingId: match[1] || null,
-          url
+          platform: platform.name,
+          meetingId: match ? match[1] : null,
+          url: url
         };
       }
     }
-
+    
     return null;
   }
 
   async updateBadge(tabId, platform) {
-    const colors = {
-      zoom: '#2D8CFF',
-      'google-meet': '#34A853',
-      teams: '#6264A7',
-      webex: '#00BCF2'
-    };
+    try {
+      const platformColors = {
+        'zoom': '#2D8CFF',
+        'meet': '#34A853', 
+        'teams': '#5B5FC7',
+        'webex': '#00BCEB'
+      };
 
-    await chrome.action.setBadgeText({
-      text: '●',
-      tabId: tabId
-    });
-
-    await chrome.action.setBadgeBackgroundColor({
-      color: colors[platform] || '#666666',
-      tabId: tabId
-    });
+      await chrome.action.setBadgeBackgroundColor({
+        color: platformColors[platform] || '#4CAF50',
+        tabId: tabId
+      });
+      
+      await chrome.action.setBadgeText({
+        text: platform.toUpperCase().substr(0, 4),
+        tabId: tabId
+      });
+    } catch (error) {
+      console.error('Failed to update badge:', error);
+    }
   }
 
   async handleMessage(message, sender, sendResponse) {
-    console.log('🔥 Background received message:', message);
+    console.log('📨 Background received message:', message);
 
     try {
+      let result;
+      
       switch (message.type) {
+        case 'LOGIN':
+          console.log('🔐 Processing login with data:', message.data);
+          result = await this.authenticateUser(message.data);
+          sendResponse({ success: true, data: result });
+          break;
+          
+        case 'AUTHENTICATE':
+        case 'GET_AUTH_STATUS':
+          console.log('🔐 Checking auth status');
+          result = await this.getAuthStatus();
+          sendResponse(result);
+          break;
         case 'START_RECORDING':
-          console.log('🎬 Attempting to start recording with data:', message.data);
-          const recordingResult = await this.startRecording(message.data, sender.tab);
-          console.log('✅ Recording started successfully:', recordingResult);
-          return { success: true, data: recordingResult };
+          console.log('🎬 Starting real recording with data:', message.data);
+          result = await this.startRealRecording(message.data, sender.tab);
+          sendResponse({ success: true, data: result });
           break;
           
         case 'STOP_RECORDING':
-          console.log('⏹️ Attempting to stop recording');
-          const stopResult = await this.stopRecording(message.data);
-          console.log('✅ Recording stopped successfully:', stopResult);
-          return { success: true, data: stopResult };
+          console.log('⏹️ Stopping real recording');
+          result = await this.stopRealRecording(message.data);
+          sendResponse({ success: true, data: result });
           break;
           
         case 'CREATE_HIGHLIGHT':
           console.log('✨ Creating highlight:', message.data);
-          const highlightResult = await this.createHighlight(message.data);
-          return { success: true, data: highlightResult };
+          result = await this.createHighlight(message.data);
+          sendResponse({ success: true, data: result });
           break;
-          
-        case 'GET_AUTH_STATUS':
-          console.log('🔐 Checking auth status');
-          const authStatus = await this.getAuthStatus();
-          console.log('📋 Auth status result:', authStatus);
-          return authStatus;
-          break;
-          
-        case 'CHECK_AUTH':
-          console.log('🔐 Quick auth check');
-          const quickAuthStatus = await this.getAuthStatus();
-          console.log('📋 Quick auth check result:', quickAuthStatus);
-          return quickAuthStatus;
-          break;
-          
-        case 'AUTHENTICATE':
-          console.log('🔑 Authenticating user:', message.data?.email);
-          try {
-            const authResult = await this.authenticate(message.data);
-            console.log('✅ Auth result from authenticate method:', authResult);
-            // Ensure the response format matches what popup expects
-            const response = { success: true, data: authResult };
-            console.log('✅ Sending response to popup:', response);
-            return response;
-          } catch (error) {
-            console.error('❌ Authentication failed in handler:', error);
-            return { success: false, error: error.message };
-          }
-          
-        case 'GET_SETTINGS':
-          console.log('⚙️ Getting settings');
-          const settings = await chrome.storage.sync.get('settings');
-          return settings.settings;
-          break;
-          
-        case 'UPDATE_SETTINGS':
-          console.log('💾 Updating settings:', message.data);
-          await chrome.storage.sync.set({ settings: message.data });
-          return { success: true };
-          break;
-          
-        case 'OPEN_POPUP':
-          console.log('🪟 Opening extension popup');
-          // In Manifest V3, we can't programmatically open popup, 
-          // but we can show a notification to remind user to click extension icon
-          if (chrome.notifications) {
-            chrome.notifications.create({
-              type: 'basic',
-              iconUrl: 'icons/icon48.png',
-              title: 'MeetNote Login Required',
-              message: 'Please click the MeetNote extension icon to log in before recording meetings.'
-            });
-          }
-          return { success: true };
+
+        case 'GET_TAB_INFO':
+          console.log('🌐 Getting tab info');
+          result = await this.getActiveTabInfo();
+          sendResponse({ success: true, data: result });
           break;
           
         default:
-          console.warn('⚠️ Unknown message type:', message.type);
-          return { error: 'Unknown message type' };
+          console.warn('❓ Unknown message type:', message.type);
+          sendResponse({ success: false, error: 'Unknown message type' });
       }
     } catch (error) {
-      console.error('❌ Error handling message:', error);
-      console.error('📋 Error details:', {
-        message: error.message,
-        stack: error.stack,
-        originalMessage: message
-      });
-      return { error: error.message, details: error.stack };
+      console.error('❌ Message handling error:', error);
+      sendResponse({ success: false, error: error.message });
     }
   }
 
-  async handleCommand(command) {
-    console.log('Command received:', command);
-    
-    // Get active tab
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
-    if (!activeTab) return;
-
-    // Send command to content script
-    chrome.tabs.sendMessage(activeTab.id, {
-      type: 'KEYBOARD_COMMAND',
-      command: command
-    });
-  }
-
-  createContextMenus() {
+  async getActiveTabInfo() {
     try {
-      if (chrome.contextMenus) {
-        chrome.contextMenus.removeAll(() => {
-          chrome.contextMenus.create({
-            id: 'meetnote-start-recording',
-            title: 'Start Recording with MeetNote',
-            contexts: ['page']
-          });
-
-          chrome.contextMenus.create({
-            id: 'meetnote-create-highlight',
-            title: 'Create Highlight',
-            contexts: ['selection']
-          });
-        });
-
-        chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-          try {
-            switch (info.menuItemId) {
-              case 'meetnote-start-recording':
-                chrome.tabs.sendMessage(tab.id, { type: 'START_RECORDING_CONTEXT' });
-                break;
-              case 'meetnote-create-highlight':
-                chrome.tabs.sendMessage(tab.id, {
-                  type: 'CREATE_HIGHLIGHT_CONTEXT',
-                  selectedText: info.selectionText
-                });
-                break;
-            }
-          } catch (error) {
-            console.error('Context menu error:', error);
-          }
-        });
-      } else {
-        console.log('Context menus not available in this environment');
-      }
-    } catch (error) {
-      console.error('Failed to create context menus:', error);
-    }
-  }
-
-  async startRecording(data, tab) {
-    console.log('🎬 Starting recording process...');
-    console.log('📋 Recording data:', data);
-    console.log('🌐 Tab info:', { url: tab?.url, title: tab?.title });
-
-    try {
-      // Check authentication first
-      console.log('🔐 Checking authentication...');
-      const { apiToken } = await chrome.storage.sync.get('apiToken');
-      console.log('🔑 API Token status:', apiToken ? 'Found' : 'Missing');
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const activeTab = tabs[0];
       
-      if (!apiToken) {
-        console.error('❌ No API token found - user not authenticated');
-        throw new Error('Not authenticated - please sign in to the extension first');
+      if (!activeTab) {
+        throw new Error('No active tab found');
       }
 
-      console.log('🌐 Making API request to start recording...');
-      const requestBody = {
-        title: data.title || `Meeting on ${data.platform}`,
-        platform: data.platform,
-        meetingUrl: tab.url,
-        meetingId: data.meetingId,
-        startTime: new Date().toISOString()
+      const meetingInfo = this.detectMeetingPlatform(activeTab.url);
+      
+      return {
+        id: activeTab.id,
+        url: activeTab.url,
+        title: activeTab.title,
+        meetingInfo: meetingInfo
       };
-      console.log('📤 Request body:', requestBody);
-
-      const response = await fetch(`${this.apiUrl}/api/meetings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      console.log('📥 API Response status:', response.status);
-      console.log('📥 API Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error Response:', errorText);
-        throw new Error(`Failed to start recording: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const meeting = await response.json();
-      console.log('✅ Meeting created successfully:', meeting);
-      
-      this.currentRecording = meeting.data || meeting;
-
-      // Show success notification
-      if (chrome.notifications) {
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icons/icon.svg',
-          title: 'MeetNote Recording Started',
-          message: `Recording "${this.currentRecording.title}" in progress`
-        });
-      }
-
-      console.log('🎉 Recording started successfully!');
-      return this.currentRecording;
-
     } catch (error) {
-      console.error('❌ Failed to start recording:', error);
-      console.error('📋 Full error details:', {
-        message: error.message,
-        stack: error.stack,
-        apiUrl: this.apiUrl,
-        tabUrl: tab?.url,
-        platform: data?.platform
-      });
-      
-      // Show error notification
-      if (chrome.notifications) {
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icons/icon.svg',
-          title: 'Recording Failed',
-          message: error.message
-        });
-      }
-      
+      console.error('Failed to get tab info:', error);
       throw error;
     }
   }
 
-  async stopRecording(data) {
+  async startRealRecording(data, senderTab) {
+    console.log('🎬 Starting real recording process...');
+
     try {
-      if (!this.currentRecording) {
-        throw new Error('No active recording');
+      // Get tab information
+      const tabInfo = senderTab || await this.getActiveTabInfo();
+      
+      if (!tabInfo || !tabInfo.url) {
+        throw new Error('Unable to access tab information. Please ensure you are on a meeting page.');
       }
 
-      const { apiToken } = await chrome.storage.sync.get('apiToken');
+      // Check authentication
+      const authStatus = await this.getAuthStatus();
+      if (!authStatus.authenticated) {
+        throw new Error('Not authenticated. Please sign in to the extension first.');
+      }
+
+      // Create meeting in backend
+      const meetingData = {
+        title: data?.title || `Meeting on ${data?.platform || 'Unknown Platform'}`,
+        platform: data?.platform || 'unknown',
+        meeting_url: tabInfo.url,
+        meeting_id: data?.meetingId || null,
+        start_time: new Date().toISOString()
+      };
+
+      console.log('📤 Creating meeting:', meetingData);
       
-      const response = await fetch(`${this.apiUrl}/api/meetings/${this.currentRecording.id}/stop`, {
+      const response = await fetch(`${this.apiUrl}/api/meetings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
+          'Authorization': `Bearer ${authStatus.token}`
         },
-        body: JSON.stringify({
-          endTime: new Date().toISOString(),
-          duration: data.duration
-        })
+        body: JSON.stringify(meetingData)
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to stop recording: ${response.statusText}`);
+        const error = await response.text();
+        throw new Error(`Failed to create meeting: ${error}`);
       }
 
-      const result = await response.json();
-      this.currentRecording = null;
+      const meetingResult = await response.json();
+      this.currentMeetingId = meetingResult.meeting.id;
+      
+      console.log('✅ Meeting created:', meetingResult.meeting);
 
-      // Show notification
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon.svg',
-        title: 'MeetNote Recording Stopped',
-        message: 'Processing recording and generating insights...'
+      // Connect WebSocket for real-time transcription
+      await this.connectWebSocket();
+      
+      // Start audio capture
+      await this.startAudioCapture(tabInfo.id);
+
+      this.isRecording = true;
+      this.currentRecordingData = meetingResult.meeting;
+
+      // Update badge
+      await chrome.action.setBadgeText({ text: 'REC' });
+      await chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+
+      return {
+        success: true,
+        meeting: meetingResult.meeting,
+        message: 'Real recording started successfully'
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to start real recording:', error);
+      throw error;
+    }
+  }
+
+  async connectWebSocket() {
+    return new Promise((resolve, reject) => {
+      try {
+        const wsUrl = `${this.wsUrl}/${this.clientId}`;
+        console.log('🔌 Connecting to WebSocket:', wsUrl);
+        
+        this.activeSocket = new WebSocket(wsUrl);
+
+        this.activeSocket.onopen = () => {
+          console.log('✅ WebSocket connected');
+          
+          // Join meeting room
+          if (this.currentMeetingId) {
+            this.activeSocket.send(JSON.stringify({
+              type: 'join-meeting',
+              meetingId: this.currentMeetingId
+            }));
+          }
+          
+          resolve();
+        };
+
+        this.activeSocket.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          console.log('📨 WebSocket message:', message);
+          
+          // Forward transcript updates to content script
+          if (message.type === 'transcript-update') {
+            this.broadcastToContentScripts({
+              type: 'TRANSCRIPT_UPDATE',
+              data: message
+            });
+          }
+        };
+
+        this.activeSocket.onerror = (error) => {
+          console.error('❌ WebSocket error:', error);
+          reject(error);
+        };
+
+        this.activeSocket.onclose = () => {
+          console.log('🔌 WebSocket closed');
+          this.activeSocket = null;
+        };
+
+      } catch (error) {
+        console.error('❌ WebSocket connection failed:', error);
+        reject(error);
+      }
+    });
+  }
+
+  async startAudioCapture(tabId) {
+    try {
+      // Request screen capture with audio
+      const stream = await chrome.tabCapture.capture({
+        audio: true,
+        video: false
       });
 
-      return result.data;
+      if (!stream) {
+        throw new Error('Failed to capture tab audio');
+      }
+
+      this.mediaStream = stream;
+      console.log('🎤 Audio capture started');
+
+      // Set up audio processing
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      processor.onaudioprocess = (event) => {
+        if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
+          const audioData = event.inputBuffer.getChannelData(0);
+          
+          // Convert to base64 and send to backend
+          const audioArray = new Float32Array(audioData);
+          const base64Audio = this.arrayBufferToBase64(audioArray.buffer);
+          
+          this.activeSocket.send(JSON.stringify({
+            type: 'audio-data',
+            audioData: base64Audio
+          }));
+        }
+      };
+
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+
+      // Start real-time transcription
+      if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
+        this.activeSocket.send(JSON.stringify({
+          type: 'start-transcription',
+          meetingId: this.currentMeetingId
+        }));
+      }
+
     } catch (error) {
-      console.error('Failed to stop recording:', error);
+      console.error('❌ Audio capture failed:', error);
+      throw error;
+    }
+  }
+
+  arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  async stopRealRecording(data) {
+    console.log('⏹️ Stopping real recording...');
+
+    try {
+      // Stop transcription
+      if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
+        this.activeSocket.send(JSON.stringify({
+          type: 'stop-transcription'
+        }));
+        this.activeSocket.close();
+      }
+
+      // Stop audio capture
+      if (this.mediaStream) {
+        this.mediaStream.getTracks().forEach(track => track.stop());
+        this.mediaStream = null;
+      }
+
+      // Update meeting in backend
+      if (this.currentMeetingId) {
+        const authStatus = await this.getAuthStatus();
+        
+        const response = await fetch(`${this.apiUrl}/api/meetings/${this.currentMeetingId}/stop`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStatus.token}`
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Meeting stopped:', result.meeting);
+        }
+      }
+
+      // Reset state
+      this.isRecording = false;
+      this.currentMeetingId = null;
+      this.currentRecordingData = null;
+      this.activeSocket = null;
+
+      // Update badge
+      await chrome.action.setBadgeText({ text: 'OFF' });
+      await chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+
+      return {
+        success: true,
+        message: 'Real recording stopped successfully'
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to stop recording:', error);
       throw error;
     }
   }
 
   async createHighlight(data) {
     try {
-      if (!this.currentRecording) {
+      if (!this.currentMeetingId) {
         throw new Error('No active recording');
       }
 
-      const { apiToken } = await chrome.storage.sync.get('apiToken');
+      const authStatus = await this.getAuthStatus();
       
-      const response = await fetch(`${this.apiUrl}/api/highlights`, {
+      const response = await fetch(`${this.apiUrl}/api/meetings/${this.currentMeetingId}/highlights`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
+          'Authorization': `Bearer ${authStatus.token}`
         },
         body: JSON.stringify({
-          meetingId: this.currentRecording.id,
-          timestamp: data.timestamp,
+          meeting_id: this.currentMeetingId,
           text: data.text,
-          duration: data.duration || 30
+          timestamp: data.timestamp || new Date().toISOString(),
+          type: data.type || 'important'
         })
       });
 
@@ -480,88 +511,161 @@ class MeetNoteAPI {
         throw new Error(`Failed to create highlight: ${response.statusText}`);
       }
 
-      const highlight = await response.json();
+      const result = await response.json();
+      console.log('✨ Highlight created:', result.highlight);
       
-      // Show notification
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon.svg',
-        title: 'Highlight Created',
-        message: 'Highlight saved successfully'
+      return result;
+
+    } catch (error) {
+      console.error('❌ Failed to create highlight:', error);
+      throw error;
+    }
+  }
+
+  async authenticateUser({ email, password }) {
+    console.log('🔐 Authenticating user:', { email, passwordLength: password.length });
+
+    try {
+      const response = await fetch(`${this.apiUrl}/api/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
 
-      return highlight.data;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Authentication failed: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Authentication successful:', result);
+
+      if (result.success && result.token) {
+        // Store the token
+        await chrome.storage.sync.set({ apiToken: result.token });
+        
+        return {
+          success: true,
+          user: result.user,
+          token: result.token,
+          message: 'Authentication successful'
+        };
+      } else {
+        throw new Error(result.message || 'Authentication failed');
+      }
+
     } catch (error) {
-      console.error('Failed to create highlight:', error);
+      console.error('❌ Authentication failed:', error);
       throw error;
     }
   }
 
   async getAuthStatus() {
     try {
-      console.log('🔐 Checking auth status...');
+      const { apiToken } = await chrome.storage.sync.get('apiToken');
       
-      const result = await chrome.storage.sync.get(['apiToken', 'user']);
-      console.log('📋 Storage check:', { 
-        hasToken: !!result.apiToken, 
-        hasUser: !!result.user 
-      });
-      
-      if (!result.apiToken || !result.user) {
-        console.log('❌ No token or user found in storage');
-        return { authenticated: false };
+      if (!apiToken) {
+        return {
+          authenticated: false,
+          user: null,
+          message: 'Not authenticated'
+        };
       }
 
-      console.log('✅ User authenticated:', result.user);
-      return { 
-        authenticated: true, 
-        user: result.user 
-      };
+      // Verify token with backend
+      const response = await fetch(`${this.apiUrl}/api/auth/status`, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        return {
+          authenticated: true,
+          user: result.user,
+          token: apiToken,
+          message: 'Authenticated successfully'
+        };
+      } else {
+        // Invalid token
+        await chrome.storage.sync.remove('apiToken');
+        return {
+          authenticated: false,
+          user: null,
+          message: 'Invalid token'
+        };
+      }
+
     } catch (error) {
-      console.error('❌ Failed to check auth status:', error);
-      return { authenticated: false };
+      console.error('❌ Auth status check failed:', error);
+      return {
+        authenticated: false,
+        user: null,
+        error: error.message
+      };
     }
   }
 
-  async authenticate(credentials) {
-    try {
-      console.log('🔐 Authenticating with credentials:', { email: credentials.email });
-      
-      const response = await fetch(`${this.apiUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(credentials)
-      });
+  async handleCommand(command) {
+    console.log('⌨️ Keyboard shortcut triggered:', command);
+    
+    switch (command) {
+      case 'toggle-recording':
+        if (this.isRecording) {
+          await this.stopRealRecording();
+        } else {
+          const tabInfo = await this.getActiveTabInfo();
+          if (tabInfo && tabInfo.meetingInfo) {
+            await this.startRealRecording(tabInfo.meetingInfo, tabInfo);
+          }
+        }
+        break;
+    }
+  }
 
-      console.log('📥 Auth response status:', response.status);
+  createContextMenus() {
+    chrome.contextMenus.create({
+      id: 'meetnote-start-recording',
+      title: 'Start MeetNote Recording',
+      contexts: ['page']
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Auth error response:', errorText);
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+    chrome.contextMenus.create({
+      id: 'meetnote-stop-recording', 
+      title: 'Stop MeetNote Recording',
+      contexts: ['page']
+    });
+
+    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+      if (info.menuItemId === 'meetnote-start-recording' && !this.isRecording) {
+        const tabInfo = await this.getActiveTabInfo();
+        if (tabInfo && tabInfo.meetingInfo) {
+          await this.startRealRecording(tabInfo.meetingInfo, tabInfo);
+        }
+      } else if (info.menuItemId === 'meetnote-stop-recording' && this.isRecording) {
+        await this.stopRealRecording();
       }
+    });
+  }
 
-      const auth = await response.json();
-      console.log('✅ Auth successful:', { success: auth.success, user: auth.user });
+  async broadcastToContentScripts(message) {
+    try {
+      const tabs = await chrome.tabs.query({});
       
-      // Store token and user info - backend returns token and user directly, not nested under data
-      await chrome.storage.sync.set({
-        apiToken: auth.token,
-        user: auth.user
-      });
-
-      return {
-        token: auth.token,
-        user: auth.user
-      };
+      for (const tab of tabs) {
+        try {
+          chrome.tabs.sendMessage(tab.id, message);
+        } catch (error) {
+          // Ignore tabs that don't have content script
+        }
+      }
     } catch (error) {
-      console.error('❌ Authentication failed:', error);
-      throw error;
+      console.error('Failed to broadcast to content scripts:', error);
     }
   }
 }
 
 // Initialize the background service
-new MeetNoteAPI();
+const meetNoteService = new MeetNoteBackgroundService();

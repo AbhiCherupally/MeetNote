@@ -46,33 +46,44 @@ class MeetNoteContent {
   handleMessage(message, sender, sendResponse) {
     console.log('Content script received message:', message);
     
-    switch (message.type) {
-      case 'MEETING_DETECTED':
+    switch (message.type) {\n      case 'REQUEST_SCREEN_CAPTURE':\n        this.requestRealScreenCapture()\n          .then(result => {\n            console.log('\u2705 REAL screen capture successful:', result);\n            sendResponse({ success: true, streamId: result.streamId, audioTracks: result.audioTracks });\n          })\n          .catch(error => {\n            console.error('\u274c REAL screen capture failed:', error);\n            sendResponse({ success: false, error: error.message });\n          });\n        return true; // Keep message channel open\n        \n      case 'STOP_AUDIO_CAPTURE':\n        this.stopAudioCapture();\n        sendResponse({ success: true });\n        break;\n        \n      case 'REAL_TRANSCRIPT_UPDATE':\n        console.log('\ud83d\udcdd Received REAL transcript update:', message.data);\n        this.updateRealTranscriptOverlay(message.data);\n        break;\n        \n      case 'MEETING_DETECTED':
         this.onMeetingDetected(message);
         break;
         
       case 'KEYBOARD_COMMAND':
         this.handleKeyboardCommand(message.command);
         break;
-        
+
       case 'START_RECORDING_CONTEXT':
         this.startRecordingFromContext();
         break;
         
-      case 'CREATE_HIGHLIGHT_CONTEXT':
-        this.createHighlightFromContext(message.selectedText);
+      case 'START_TRANSCRIPT':
+        console.log('📄 Starting transcript overlay');
+        this.showTranscriptOverlay();
+        this.isRecording = true;
         break;
         
+      case 'STOP_TRANSCRIPT':
+        console.log('📄 Stopping transcript overlay');
+        this.hideTranscriptOverlay();
+        this.isRecording = false;
+        break;
+
       case 'TOGGLE_TRANSCRIPT':
         this.toggleTranscriptOverlay();
         break;
         
-      default:
-        console.log('Unknown message type:', message.type);
-    }
-  }
+      case 'UPDATE_TRANSCRIPT':
+        this.updateTranscriptContent(message.data);
+        break;
 
-  onMeetingDetected(message) {
+      default:
+        console.log('⚠️ Unknown message type:', message.type);
+    }
+    
+    sendResponse({ received: true });
+  }  onMeetingDetected(message) {
     this.meetingInfo = {
       platform: message.platform,
       meetingId: message.meetingId,

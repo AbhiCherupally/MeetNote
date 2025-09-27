@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: meetnote
+    name: meetnote-backend
     env: docker
     region: oregon
     plan: free
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
     healthCheckPath: /api/health
     envVars:
       - key: ENVIRONMENT
@@ -13,7 +13,19 @@ services:
       - key: PORT
         value: 10000
       - key: ASSEMBLYAI_API_KEY
-        sync: false
+        sync: false  # Set this in Render dashboard
+      - key: OPENROUTER_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: DATABASE_URL
+        sync: false  # Set this to your PostgreSQL connection string
+      - key: JWT_SECRET_KEY
+        sync: false  # Generate and set a secure secret key
     scaling:
       minInstances: 1
       maxInstances: 2
+
+databases:
+  - name: meetnote-database
+    databaseName: meetnote
+    user: meetnote_user
+    plan: free

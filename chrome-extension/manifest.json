@@ -17,7 +17,9 @@
     "tabs",
     "webRequest",
     "identity",
-    "scripting"
+    "scripting",
+    "tabCapture",
+    "desktopCapture"
   ],
   
   "host_permissions": [
@@ -87,6 +89,6 @@
   },
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://meetnote.onrender.com https://openrouter.ai"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://meetnote.onrender.com https://openrouter.ai wss://meetnote.onrender.com"
   }
 }

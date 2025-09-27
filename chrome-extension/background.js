@@ -3,13 +3,13 @@
 
 class MeetNoteBackgroundService {
   constructor() {
-    // Use your actual new Render deployment URL
-    this.apiUrl = 'https://meetnote-backend.onrender.com'; // Your new Python backend
-    this.wsUrl = 'wss://meetnote-backend.onrender.com/ws'; // Your new WebSocket URL
+    // Production URLs (Render deployment)
+    this.apiUrl = 'https://meetnote.onrender.com'; // Production Render backend
+    this.wsUrl = 'wss://meetnote.onrender.com/ws'; // Production WebSocket
     
-    // For development, uncomment these lines:
-    // this.apiUrl = 'http://localhost:8000';
-    // this.wsUrl = 'ws://localhost:8000/ws';
+    // For local development, uncomment these lines:
+    // this.apiUrl = 'http://localhost:8000'; // Local Docker backend
+    // this.wsUrl = 'ws://localhost:8000/ws'; // Local Docker WebSocket
     
     this.isRecording = false;
     this.activeSocket = null;
@@ -370,41 +370,29 @@ class MeetNoteBackgroundService {
 
   async startAudioCapture(tabId) {
     try {
-      // Request screen capture with audio
-      const stream = await chrome.tabCapture.capture({
-        audio: true,
-        video: false
+      console.log('🎤 Starting audio capture for tab:', tabId);
+      
+      // Use chrome.tabCapture API to capture audio from the tab
+      const stream = await new Promise((resolve, reject) => {
+        chrome.tabCapture.capture({
+          audio: true,
+          video: false
+        }, (stream) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (!stream) {
+            reject(new Error('Failed to capture tab audio - no stream returned'));
+          } else {
+            resolve(stream);
+          }
+        });
       });
 
-      if (!stream) {
-        throw new Error('Failed to capture tab audio');
-      }
-
       this.mediaStream = stream;
-      console.log('🎤 Audio capture started');
+      console.log('✅ Audio capture started successfully');
 
-      // Set up audio processing
-      const audioContext = new AudioContext();
-      const source = audioContext.createMediaStreamSource(stream);
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-      processor.onaudioprocess = (event) => {
-        if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
-          const audioData = event.inputBuffer.getChannelData(0);
-          
-          // Convert to base64 and send to backend
-          const audioArray = new Float32Array(audioData);
-          const base64Audio = this.arrayBufferToBase64(audioArray.buffer);
-          
-          this.activeSocket.send(JSON.stringify({
-            type: 'audio-data',
-            audioData: base64Audio
-          }));
-        }
-      };
-
-      source.connect(processor);
-      processor.connect(audioContext.destination);
+      // Set up real-time audio processing
+      await this.setupAudioProcessing(stream);
 
       // Start real-time transcription
       if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
@@ -417,6 +405,61 @@ class MeetNoteBackgroundService {
     } catch (error) {
       console.error('❌ Audio capture failed:', error);
       throw error;
+    }
+  }
+
+  async setupAudioProcessing(stream) {
+    try {
+      // Create audio context for processing
+      // Note: AudioContext may not be available in service worker context
+      if (typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined') {
+        console.warn('AudioContext not available in service worker, using simplified processing');
+        // Store the stream for basic processing
+        this.mediaStream = stream;
+        return;
+      }
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      processor.onaudioprocess = (event) => {
+        if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
+          const audioData = event.inputBuffer.getChannelData(0);
+          
+          // Convert Float32Array to Int16Array (16-bit PCM)
+          const buffer = new ArrayBuffer(audioData.length * 2);
+          const view = new DataView(buffer);
+          
+          for (let i = 0; i < audioData.length; i++) {
+            const sample = Math.max(-1, Math.min(1, audioData[i]));
+            view.setInt16(i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+          }
+          
+          // Send binary audio data
+          this.activeSocket.send(JSON.stringify({
+            type: 'audio-data',
+            audioData: Array.from(new Uint8Array(buffer)),
+            sampleRate: audioContext.sampleRate,
+            format: 'pcm16'
+          }));
+        }
+      };
+
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+      
+      // Store for cleanup
+      this.audioContext = audioContext;
+      this.audioProcessor = processor;
+      
+      console.log('✅ Audio processing setup complete');
+
+    } catch (error) {
+      console.error('❌ Audio processing setup failed:', error);
+      // Fallback: just store the stream without processing
+      this.mediaStream = stream;
     }
   }
 
@@ -441,26 +484,42 @@ class MeetNoteBackgroundService {
         this.activeSocket.close();
       }
 
-      // Stop audio capture
+      // Stop audio capture and clean up resources
       if (this.mediaStream) {
-        this.mediaStream.getTracks().forEach(track => track.stop());
+        this.mediaStream.getTracks().forEach(track => {
+          track.stop();
+          console.log('🛑 Audio track stopped:', track.kind);
+        });
         this.mediaStream = null;
+      }
+
+      // Clean up audio processing
+      if (this.audioProcessor) {
+        this.audioProcessor.disconnect();
+        this.audioProcessor = null;
+      }
+
+      if (this.audioContext) {
+        await this.audioContext.close();
+        this.audioContext = null;
       }
 
       // Update meeting in backend
       if (this.currentMeetingId) {
         const authStatus = await this.getAuthStatus();
         
-        const response = await fetch(`${this.apiUrl}/api/meetings/${this.currentMeetingId}/stop`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authStatus.token}`
-          }
-        });
+        if (authStatus.authenticated) {
+          const response = await fetch(`${this.apiUrl}/api/meetings/${this.currentMeetingId}/stop`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authStatus.token}`
+            }
+          });
 
-        if (response.ok) {
-          const result = await response.json();
-          console.log('✅ Meeting stopped:', result.meeting);
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Meeting stopped:', result);
+          }
         }
       }
 
@@ -526,11 +585,15 @@ class MeetNoteBackgroundService {
     console.log('🔐 Authenticating user:', { email, passwordLength: password.length });
 
     try {
-      const response = await fetch(`${this.apiUrl}/api/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, {
+      const response = await fetch(`${this.apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
       });
 
       if (!response.ok) {
@@ -626,28 +689,39 @@ class MeetNoteBackgroundService {
   }
 
   createContextMenus() {
-    chrome.contextMenus.create({
-      id: 'meetnote-start-recording',
-      title: 'Start MeetNote Recording',
-      contexts: ['page']
-    });
+    try {
+      // Clear existing context menus first
+      chrome.contextMenus.removeAll(() => {
+        // Create new context menus
+        chrome.contextMenus.create({
+          id: 'meetnote-start-recording',
+          title: 'Start MeetNote Recording',
+          contexts: ['page']
+        });
 
-    chrome.contextMenus.create({
-      id: 'meetnote-stop-recording', 
-      title: 'Stop MeetNote Recording',
-      contexts: ['page']
-    });
+        chrome.contextMenus.create({
+          id: 'meetnote-stop-recording', 
+          title: 'Stop MeetNote Recording',
+          contexts: ['page']
+        });
+      });
 
-    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-      if (info.menuItemId === 'meetnote-start-recording' && !this.isRecording) {
-        const tabInfo = await this.getActiveTabInfo();
-        if (tabInfo && tabInfo.meetingInfo) {
-          await this.startRealRecording(tabInfo.meetingInfo, tabInfo);
-        }
-      } else if (info.menuItemId === 'meetnote-stop-recording' && this.isRecording) {
-        await this.stopRealRecording();
+      // Add click listener
+      if (chrome.contextMenus.onClicked) {
+        chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+          if (info.menuItemId === 'meetnote-start-recording' && !this.isRecording) {
+            const tabInfo = await this.getActiveTabInfo();
+            if (tabInfo && tabInfo.meetingInfo) {
+              await this.startRealRecording(tabInfo.meetingInfo, tabInfo);
+            }
+          } else if (info.menuItemId === 'meetnote-stop-recording' && this.isRecording) {
+            await this.stopRealRecording();
+          }
+        });
       }
-    });
+    } catch (error) {
+      console.warn('Context menus not supported or failed to create:', error);
+    }
   }
 
   async broadcastToContentScripts(message) {

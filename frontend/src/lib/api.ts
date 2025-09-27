@@ -1,5 +1,5 @@
 // API configuration and utilities for connecting to the Python FastAPI backend
-const API_BASE_URL = 'https://meetnote-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export const api = {
   baseURL: API_BASE_URL,
@@ -8,20 +8,43 @@ export const api = {
   async checkHealth() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/health`);
-      return response.ok;
+      if (response.ok) {
+        const data = await response.json();
+        return { healthy: true, data };
+      }
+      return { healthy: false, error: 'Health check failed' };
     } catch (error) {
       console.error('Backend health check failed:', error);
-      return false;
+      return { healthy: false, error: (error as Error).message };
     }
   },
   
-  // Authentication endpoints
+  // Authentication endpoints - matches Python FastAPI format
   async login(email: string, password: string) {
-    const response = await fetch(`${API_BASE_URL}/api/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-      }
+      },
+      body: JSON.stringify({
+        email,
+        password
+      })
+    });
+    return response.json();
+  },
+
+  async register(email: string, password: string, name: string) {
+    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      method: 'POST', 
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        name
+      })
     });
     return response.json();
   },

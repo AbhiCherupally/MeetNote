@@ -183,57 +183,60 @@ class MeetNoteAPI {
           console.log('🎬 Attempting to start recording with data:', message.data);
           const recordingResult = await this.startRecording(message.data, sender.tab);
           console.log('✅ Recording started successfully:', recordingResult);
-          sendResponse({ success: true, data: recordingResult });
+          return { success: true, data: recordingResult };
           break;
           
         case 'STOP_RECORDING':
           console.log('⏹️ Attempting to stop recording');
           const stopResult = await this.stopRecording(message.data);
           console.log('✅ Recording stopped successfully:', stopResult);
-          sendResponse({ success: true, data: stopResult });
+          return { success: true, data: stopResult };
           break;
           
         case 'CREATE_HIGHLIGHT':
           console.log('✨ Creating highlight:', message.data);
           const highlightResult = await this.createHighlight(message.data);
-          sendResponse({ success: true, data: highlightResult });
+          return { success: true, data: highlightResult };
           break;
           
         case 'GET_AUTH_STATUS':
           console.log('🔐 Checking auth status');
           const authStatus = await this.getAuthStatus();
           console.log('📋 Auth status result:', authStatus);
-          sendResponse(authStatus);
+          return authStatus;
           break;
           
         case 'CHECK_AUTH':
           console.log('🔐 Quick auth check');
           const quickAuthStatus = await this.getAuthStatus();
           console.log('📋 Quick auth check result:', quickAuthStatus);
-          sendResponse(quickAuthStatus);
+          return quickAuthStatus;
           break;
           
         case 'AUTHENTICATE':
           console.log('🔑 Authenticating user:', message.data?.email);
           try {
             const authResult = await this.authenticate(message.data);
-            sendResponse({ success: true, data: authResult });
+            console.log('✅ Auth result from authenticate method:', authResult);
+            // Ensure the response format matches what popup expects
+            const response = { success: true, data: authResult };
+            console.log('✅ Sending response to popup:', response);
+            return response;
           } catch (error) {
             console.error('❌ Authentication failed in handler:', error);
-            sendResponse({ success: false, error: error.message });
+            return { success: false, error: error.message };
           }
-          break;
           
         case 'GET_SETTINGS':
           console.log('⚙️ Getting settings');
           const settings = await chrome.storage.sync.get('settings');
-          sendResponse(settings.settings);
+          return settings.settings;
           break;
           
         case 'UPDATE_SETTINGS':
           console.log('💾 Updating settings:', message.data);
           await chrome.storage.sync.set({ settings: message.data });
-          sendResponse({ success: true });
+          return { success: true };
           break;
           
         case 'OPEN_POPUP':
@@ -248,12 +251,12 @@ class MeetNoteAPI {
               message: 'Please click the MeetNote extension icon to log in before recording meetings.'
             });
           }
-          sendResponse({ success: true });
+          return { success: true };
           break;
           
         default:
           console.warn('⚠️ Unknown message type:', message.type);
-          sendResponse({ error: 'Unknown message type' });
+          return { error: 'Unknown message type' };
       }
     } catch (error) {
       console.error('❌ Error handling message:', error);
@@ -262,10 +265,8 @@ class MeetNoteAPI {
         stack: error.stack,
         originalMessage: message
       });
-      sendResponse({ error: error.message, details: error.stack });
+      return { error: error.message, details: error.stack };
     }
-
-    return true; // Keep message channel open for async response
   }
 
   async handleCommand(command) {

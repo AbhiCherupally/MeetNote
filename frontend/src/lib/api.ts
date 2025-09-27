@@ -1,5 +1,5 @@
 // API configuration and utilities for connecting to the Python FastAPI backend
-const API_BASE_URL = 'https://meetnote.onrender.com';
+const API_BASE_URL = 'https://meetnote-backend.onrender.com';
 
 export const api = {
   baseURL: API_BASE_URL,

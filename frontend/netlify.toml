@@ -12,8 +12,8 @@
 
   # Environment Variables
   [build.environment]
-    NEXT_PUBLIC_API_URL = "https://meetnote.onrender.com"
-    NEXT_PUBLIC_WS_URL = "wss://meetnote.onrender.com"
+    NEXT_PUBLIC_API_URL = "https://meetnote-backend.onrender.com"
+    NEXT_PUBLIC_WS_URL = "wss://meetnote-backend.onrender.com"
     NODE_ENV = "production"
   
 # No redirects needed for static export - Netlify serves files directly

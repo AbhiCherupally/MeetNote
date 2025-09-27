@@ -3,9 +3,9 @@
 
 class MeetNoteBackgroundService {
   constructor() {
-    // Use your actual Render deployment URL
-    this.apiUrl = 'https://meetnote.onrender.com'; // Your actual Render backend
-    this.wsUrl = 'wss://meetnote.onrender.com/ws'; // Your actual WebSocket URL
+    // Use your actual new Render deployment URL
+    this.apiUrl = 'https://meetnote-backend.onrender.com'; // Your new Python backend
+    this.wsUrl = 'wss://meetnote-backend.onrender.com/ws'; // Your new WebSocket URL
     
     // For development, uncomment these lines:
     // this.apiUrl = 'http://localhost:8000';

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: meetnote-python-backend
+    name: meetnote
     env: docker
     region: oregon
     plan: free

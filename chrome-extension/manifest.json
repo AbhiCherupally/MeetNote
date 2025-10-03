@@ -14,7 +14,8 @@
     "activeTab",
     "storage",
     "tabs",
-    "tabCapture"
+    "tabCapture",
+    "offscreen"
   ],
   
   "host_permissions": [

@@ -95,10 +95,10 @@ async function saveMeeting(meetingData) {
   return response.json();
 }
 
-// Recording functions using tabCapture API (Manifest V3)
+// Recording functions using offscreen document (ONLY way in MV3)
 async function startRecording() {
   try {
-    console.log('🎤 Background: Starting tab audio capture...');
+    console.log('🎤 Background: Starting recording...');
     
     // Get the active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -107,9 +107,9 @@ async function startRecording() {
       throw new Error('No active tab found');
     }
     
-    console.log('📹 Background: Capturing audio from tab:', tab.url);
+    console.log('📹 Background: Tab:', tab.url);
     
-    // Get media stream ID for the tab (Manifest V3 approach)
+    // Get media stream ID for the tab
     const streamId = await chrome.tabCapture.getMediaStreamId({
       targetTabId: tab.id
     });
@@ -118,73 +118,26 @@ async function startRecording() {
       throw new Error('Failed to get media stream ID');
     }
     
-    console.log('✅ Background: Got stream ID:', streamId);
+    console.log('✅ Background: Got stream ID');
     
-    // Use getUserMedia with the stream ID
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        mandatory: {
-          chromeMediaSource: 'tab',
-          chromeMediaSourceId: streamId
-        }
-      }
+    // Create offscreen document if needed
+    await setupOffscreenDocument();
+    
+    // Tell offscreen document to start recording
+    const response = await chrome.runtime.sendMessage({
+      type: 'START_OFFSCREEN_RECORDING',
+      streamId: streamId
     });
     
-    console.log('✅ Background: Tab audio stream captured');
-    recordingStream = stream;
+    if (!response || !response.success) {
+      throw new Error('Offscreen recording failed to start');
+    }
     
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-      ? 'audio/webm;codecs=opus' 
-      : 'audio/webm';
-    
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
-    audioChunks = [];
-    transcript = [];
-    
-    mediaRecorder.ondataavailable = async (event) => {
-      if (event.data.size > 0) {
-        console.log('📦 Background: Audio chunk received:', event.data.size, 'bytes');
-        audioChunks.push(event.data);
-        
-        // Process chunks in batches of 2 (every 10 seconds)
-        if (audioChunks.length >= 2) {
-          await processAudioChunks(audioChunks.slice());
-          audioChunks = [];
-        }
-      }
-    };
-    
-    mediaRecorder.onstop = async () => {
-      console.log('⏹️ Background: Recording stopped');
-      
-      // Stop all tracks
-      if (recordingStream) {
-        recordingStream.getTracks().forEach(track => track.stop());
-        recordingStream = null;
-      }
-      
-      // Process remaining chunks
-      if (audioChunks.length > 0) {
-        await processAudioChunks(audioChunks.slice());
-        audioChunks = [];
-      }
-      
-      // Notify popup
-      chrome.runtime.sendMessage({
-        type: 'RECORDING_STOPPED',
-        transcriptLength: transcript.length
-      });
-    };
-    
-    mediaRecorder.onerror = (event) => {
-      console.error('❌ Background: MediaRecorder error:', event.error);
-    };
-    
-    mediaRecorder.start(5000); // Capture every 5 seconds
     isRecording = true;
     recordingStartTime = Date.now();
+    transcript = [];
     
-    console.log('✅ Background: Recording started successfully');
+    console.log('✅ Background: Recording started');
     
     // Notify popup
     chrome.runtime.sendMessage({
@@ -197,14 +150,56 @@ async function startRecording() {
   }
 }
 
+async function setupOffscreenDocument() {
+  const path = 'offscreen.html';
+  
+  // Check if offscreen document already exists
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT']
+  });
+  
+  if (existingContexts.length > 0) {
+    console.log('✅ Offscreen document already exists');
+    return;
+  }
+  
+  // Create offscreen document
+  await chrome.offscreen.createDocument({
+    url: path,
+    reasons: ['USER_MEDIA'],
+    justification: 'Recording audio from meeting tab for transcription'
+  });
+  
+  console.log('✅ Offscreen document created');
+}
+
+// Listen for messages from offscreen document
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'PROCESS_AUDIO_CHUNK') {
+    processAudioChunk(message.audioData);
+  }
+  
+  if (message.type === 'OFFSCREEN_RECORDING_STOPPED') {
+    isRecording = false;
+    
+    // Notify popup
+    chrome.runtime.sendMessage({
+      type: 'RECORDING_STOPPED',
+      transcriptLength: transcript.length
+    });
+  }
+});
+
 async function stopRecording() {
   try {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      isRecording = false;
+    if (isRecording) {
+      // Tell offscreen document to stop
+      await chrome.runtime.sendMessage({
+        type: 'STOP_OFFSCREEN_RECORDING'
+      });
       
-      // Wait a bit for onstop to process
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for final processing
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Save meeting if we have transcript
       if (transcript.length > 0) {
@@ -225,20 +220,8 @@ async function stopRecording() {
   }
 }
 
-async function processAudioChunks(chunks) {
+async function processAudioChunk(base64Audio) {
   try {
-    console.log('🎵 Background: Processing', chunks.length, 'audio chunks');
-    const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
-    console.log('📦 Background: Created audio blob:', audioBlob.size, 'bytes');
-    
-    const reader = new FileReader();
-    
-    const base64Audio = await new Promise((resolve, reject) => {
-      reader.onloadend = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(audioBlob);
-    });
-    
     console.log('📤 Background: Sending to backend for transcription...');
     const result = await transcribeAudio(base64Audio);
     
@@ -262,6 +245,6 @@ async function processAudioChunks(chunks) {
       });
     }
   } catch (error) {
-    console.error('❌ Background: Failed to process audio chunks:', error);
+    console.error('❌ Background: Failed to process audio:', error);
   }
 }

@@ -95,7 +95,7 @@ async function saveMeeting(meetingData) {
   return response.json();
 }
 
-// Recording functions using tabCapture API
+// Recording functions using tabCapture API (Manifest V3)
 async function startRecording() {
   try {
     console.log('🎤 Background: Starting tab audio capture...');
@@ -109,81 +109,87 @@ async function startRecording() {
     
     console.log('📹 Background: Capturing audio from tab:', tab.url);
     
-    // Capture audio from the tab (Google Meet, Zoom, etc.)
-    chrome.tabCapture.capture(
-      { 
-        audio: true, 
-        video: false 
-      },
-      (stream) => {
-        if (!stream) {
-          const error = chrome.runtime.lastError;
-          console.error('❌ Background: Tab capture failed:', error);
-          throw new Error(error?.message || 'Tab capture failed');
+    // Get media stream ID for the tab (Manifest V3 approach)
+    const streamId = await chrome.tabCapture.getMediaStreamId({
+      targetTabId: tab.id
+    });
+    
+    if (!streamId) {
+      throw new Error('Failed to get media stream ID');
+    }
+    
+    console.log('✅ Background: Got stream ID:', streamId);
+    
+    // Use getUserMedia with the stream ID
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        mandatory: {
+          chromeMediaSource: 'tab',
+          chromeMediaSourceId: streamId
         }
-        
-        console.log('✅ Background: Tab audio stream captured');
-        recordingStream = stream;
-        
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-          ? 'audio/webm;codecs=opus' 
-          : 'audio/webm';
-        
-        mediaRecorder = new MediaRecorder(stream, { mimeType });
-        audioChunks = [];
-        transcript = [];
-        
-        mediaRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0) {
-            console.log('📦 Background: Audio chunk received:', event.data.size, 'bytes');
-            audioChunks.push(event.data);
-            
-            // Process chunks in batches of 2 (every 10 seconds)
-            if (audioChunks.length >= 2) {
-              await processAudioChunks(audioChunks.slice());
-              audioChunks = [];
-            }
-          }
-        };
-        
-        mediaRecorder.onstop = async () => {
-          console.log('⏹️ Background: Recording stopped');
-          
-          // Stop all tracks
-          if (recordingStream) {
-            recordingStream.getTracks().forEach(track => track.stop());
-            recordingStream = null;
-          }
-          
-          // Process remaining chunks
-          if (audioChunks.length > 0) {
-            await processAudioChunks(audioChunks.slice());
-            audioChunks = [];
-          }
-          
-          // Notify popup
-          chrome.runtime.sendMessage({
-            type: 'RECORDING_STOPPED',
-            transcriptLength: transcript.length
-          });
-        };
-        
-        mediaRecorder.onerror = (event) => {
-          console.error('❌ Background: MediaRecorder error:', event.error);
-        };
-        
-        mediaRecorder.start(5000); // Capture every 5 seconds
-        isRecording = true;
-        recordingStartTime = Date.now();
-        
-        console.log('✅ Background: Recording started successfully');
-        
-        // Notify popup
-        chrome.runtime.sendMessage({
-          type: 'RECORDING_STARTED'
-        });
       }
-    );
+    });
+    
+    console.log('✅ Background: Tab audio stream captured');
+    recordingStream = stream;
+    
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+      ? 'audio/webm;codecs=opus' 
+      : 'audio/webm';
+    
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    audioChunks = [];
+    transcript = [];
+    
+    mediaRecorder.ondataavailable = async (event) => {
+      if (event.data.size > 0) {
+        console.log('📦 Background: Audio chunk received:', event.data.size, 'bytes');
+        audioChunks.push(event.data);
+        
+        // Process chunks in batches of 2 (every 10 seconds)
+        if (audioChunks.length >= 2) {
+          await processAudioChunks(audioChunks.slice());
+          audioChunks = [];
+        }
+      }
+    };
+    
+    mediaRecorder.onstop = async () => {
+      console.log('⏹️ Background: Recording stopped');
+      
+      // Stop all tracks
+      if (recordingStream) {
+        recordingStream.getTracks().forEach(track => track.stop());
+        recordingStream = null;
+      }
+      
+      // Process remaining chunks
+      if (audioChunks.length > 0) {
+        await processAudioChunks(audioChunks.slice());
+        audioChunks = [];
+      }
+      
+      // Notify popup
+      chrome.runtime.sendMessage({
+        type: 'RECORDING_STOPPED',
+        transcriptLength: transcript.length
+      });
+    };
+    
+    mediaRecorder.onerror = (event) => {
+      console.error('❌ Background: MediaRecorder error:', event.error);
+    };
+    
+    mediaRecorder.start(5000); // Capture every 5 seconds
+    isRecording = true;
+    recordingStartTime = Date.now();
+    
+    console.log('✅ Background: Recording started successfully');
+    
+    // Notify popup
+    chrome.runtime.sendMessage({
+      type: 'RECORDING_STARTED'
+    });
     
   } catch (error) {
     console.error('❌ Background: Failed to start recording:', error);

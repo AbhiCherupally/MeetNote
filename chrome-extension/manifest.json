@@ -15,12 +15,8 @@
     "storage",
     "notifications",
     "tabs",
-    "webRequest",
-    "identity",
     "scripting",
-    "tabCapture",
-    "desktopCapture",
-    "audioCapture"
+    "tabCapture"
   ],
   
   "host_permissions": [

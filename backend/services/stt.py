@@ -12,7 +12,8 @@ class STTService:
             self.model = None
         else:
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            # Use gemini-1.5-pro for audio transcription (flash doesn't support audio well)
+            self.model = genai.GenerativeModel('gemini-1.5-pro')
     
     async def transcribe_audio(self, audio_base64: str, audio_format: str = "webm") -> List[Dict[str, str]]:
         """Transcribe audio using Google Gemini API"""

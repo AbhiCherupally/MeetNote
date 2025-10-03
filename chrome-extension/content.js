@@ -40,7 +40,16 @@ class MeetNoteContent {
       this.setupWebexIntegration();
     }
     
-    console.log('Platform detected:', this.platform);
+    console.log('✅ Platform detected:', this.platform);
+    
+    // Notify that meeting platform is detected
+    if (this.platform) {
+      const meetingInfo = this.detectMeetingFromUrl(window.location.href);
+      if (meetingInfo) {
+        console.log('✅ Meeting detected:', meetingInfo);
+        this.showNotification(`MeetNote ready on ${meetingInfo.name}`, 'success');
+      }
+    }
   }
 
   handleMessage(message, sender, sendResponse) {
@@ -598,6 +607,20 @@ class MeetNoteContent {
   hideLoading() {
     console.log('✅ Content: Loading complete');
     // Hide loading spinner
+  }
+
+  // Stub methods for features not yet implemented
+  requestRealScreenCapture() {
+    console.log('⚠️ Screen capture not yet implemented');
+    return Promise.reject(new Error('Screen capture not yet implemented'));
+  }
+
+  stopAudioCapture() {
+    console.log('⚠️ Audio capture stop called');
+  }
+
+  updateRealTranscriptOverlay(data) {
+    console.log('📝 Transcript overlay update:', data);
   }
 
   detectMeetingFromUrl(url) {

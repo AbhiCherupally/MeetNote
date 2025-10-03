@@ -17,17 +17,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function transcribeAudio(audioData) {
-  const response = await fetch(`${API_URL}/meetings/transcribe`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      audio_data: audioData,
-      format: 'webm'
-    })
-  });
+  console.log('🎤 Background: Sending audio to backend API...');
+  console.log('📊 Audio data length:', audioData.length);
   
-  if (!response.ok) throw new Error('Transcription failed');
-  return response.json();
+  try {
+    const response = await fetch(`${API_URL}/meetings/transcribe`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        audio_data: audioData,
+        format: 'webm'
+      })
+    });
+    
+    console.log('📡 Backend response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Backend error:', errorText);
+      throw new Error('Transcription failed: ' + response.status);
+    }
+    
+    const result = await response.json();
+    console.log('✅ Transcription result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Transcription request failed:', error);
+    throw error;
+  }
 }
 
 async function saveMeeting(meetingData) {

@@ -55,20 +55,39 @@ async function toggleRecording() {
 
 async function startRecording() {
   try {
+    console.log('🎤 Requesting microphone access...');
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    console.log('✅ Microphone access granted');
+    
+    mediaRecorder = new MediaRecorder(stream, { 
+      mimeType: 'audio/webm;codecs=opus'
+    });
     
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
+        console.log('📦 Audio chunk received:', event.data.size, 'bytes');
         audioChunks.push(event.data);
-        processAudioChunk(event.data);
+        // Process chunk after 10 seconds for transcription
+        if (audioChunks.length >= 2) {
+          processAudioChunk(audioChunks.slice());
+          audioChunks = [];
+        }
       }
     };
     
     mediaRecorder.onstop = async () => {
+      console.log('⏹️ Recording stopped');
       stream.getTracks().forEach(track => track.stop());
+      
+      // Process any remaining audio
+      if (audioChunks.length > 0) {
+        await processAudioChunk(audioChunks.slice());
+      }
+      
       if (transcript.length > 0) {
         await saveMeeting();
+      } else {
+        alert('No transcript captured. Recording was too short.');
       }
     };
     
@@ -77,9 +96,10 @@ async function startRecording() {
     recordingStartTime = Date.now();
     startRecordingTimer();
     updateUI();
+    console.log('✅ Recording started successfully');
   } catch (error) {
-    console.error('Failed to start recording:', error);
-    alert('Failed to start recording. Please allow microphone access.');
+    console.error('❌ Failed to start recording:', error);
+    alert('Failed to start recording. Please allow microphone access.\n\nError: ' + error.message);
   }
 }
 
@@ -92,31 +112,58 @@ async function stopRecording() {
   }
 }
 
-async function processAudioChunk(audioBlob) {
+async function processAudioChunk(chunks) {
   try {
+    console.log('🎵 Processing audio chunks:', chunks.length);
+    const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+    console.log('📦 Created audio blob:', audioBlob.size, 'bytes');
+    
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64Audio = reader.result.split(',')[1];
+      console.log('📤 Sending audio to backend for transcription...');
       await transcribeAudio(base64Audio);
     };
     reader.readAsDataURL(audioBlob);
   } catch (error) {
-    console.error('Failed to process audio chunk:', error);
+    console.error('❌ Failed to process audio chunk:', error);
   }
 }
 
 async function transcribeAudio(audioData) {
   try {
+    console.log('🔄 Requesting transcription from background script...');
     const response = await chrome.runtime.sendMessage({
       type: 'TRANSCRIBE_AUDIO',
       audioData: audioData
     });
     
-    if (response && response.success && response.data.transcript) {
-      transcript.push(...response.data.transcript);
+    console.log('📥 Transcription response:', response);
+    
+    if (response && response.success && response.data) {
+      if (response.data.transcript) {
+        // Handle array of transcript segments
+        transcript.push(...response.data.transcript);
+        console.log('✅ Added transcript segments:', response.data.transcript.length);
+      } else if (response.data.text) {
+        // Handle single text response
+        transcript.push({
+          text: response.data.text,
+          timestamp: new Date().toISOString(),
+          speaker: 'Speaker'
+        });
+        console.log('✅ Added transcript text:', response.data.text.substring(0, 50));
+      }
+      
+      // Show notification
+      if (transcript.length > 0) {
+        showNotification('Transcription added (' + transcript.length + ' segments)');
+      }
+    } else if (response && response.error) {
+      console.error('❌ Transcription error from backend:', response.error);
     }
   } catch (error) {
-    console.error('Transcription error:', error);
+    console.error('❌ Transcription error:', error);
   }
 }
 
@@ -213,6 +260,11 @@ function showLoading(text) {
 
 function hideLoading() {
   document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+function showNotification(message) {
+  console.log('📢', message);
+  // Could add visual notification here
 }
 
 function updateUI() {

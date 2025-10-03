@@ -7,8 +7,8 @@
   # Build Command - Next.js build
   command = "npm install && npm run build"
   
-  # Publish Directory for Next.js static export
-  publish = "out"
+  # Publish Directory for Next.js static export (relative to base)
+  publish = "frontend/out"
 
   # Environment Variables
   [build.environment]

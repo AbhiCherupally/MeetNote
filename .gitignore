@@ -110,10 +110,6 @@ fix-*.sh
 deploy-*.sh
 start-*.py
 
-# Deployment configs (non-Docker)
-netlify.toml
-render.yaml
-
 # Backup files
 *.bak
 *.backup

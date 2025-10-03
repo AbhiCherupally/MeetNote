@@ -19,7 +19,8 @@
     "identity",
     "scripting",
     "tabCapture",
-    "desktopCapture"
+    "desktopCapture",
+    "audioCapture"
   ],
   
   "host_permissions": [

@@ -141,192 +141,102 @@ async function toggleRecording() {
   }
 }
 
-async function startRecording() {
-  try {
-    console.log('🎤 Requesting microphone access...');
-    
-    // Check if microphone permission is available
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error('Microphone access not supported in this browser');
-    }
-    
-    // Request microphone access
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
-    
-    console.log('✅ Microphone access granted');
-    
-    // Check MediaRecorder support
-    if (!MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      console.warn('⚠️ Opus codec not supported, using default');
-    }
-    
-    mediaRecorder = new MediaRecorder(stream, { 
-      mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus' 
-        : 'audio/webm'
-    });
-    
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        console.log('📦 Audio chunk received:', event.data.size, 'bytes');
-        audioChunks.push(event.data);
-        // Process chunk after 10 seconds for transcription
-        if (audioChunks.length >= 2) {
-          processAudioChunk(audioChunks.slice());
-          audioChunks = [];
-        }
-      }
-    };
-    
-    mediaRecorder.onstop = async () => {
-      console.log('⏹️ Recording stopped');
-      stream.getTracks().forEach(track => track.stop());
-      
-      // Process any remaining audio
-      if (audioChunks.length > 0) {
-        await processAudioChunk(audioChunks.slice());
-      }
-      
-      if (transcript.length > 0) {
-        await saveMeeting();
-      } else {
-        alert('No transcript captured. Recording was too short.');
-      }
-    };
-    
-    mediaRecorder.onerror = (event) => {
-      console.error('❌ MediaRecorder error:', event.error);
-      alert('Recording error: ' + event.error.name);
-    };
-    
-    mediaRecorder.start(5000); // Capture every 5 seconds
+// Listen for messages from background
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('📨 Popup received message:', message.type);
+  
+  if (message.type === 'RECORDING_STARTED') {
     isRecording = true;
     recordingStartTime = Date.now();
     startRecordingTimer();
     updateUI();
-    console.log('✅ Recording started successfully');
+    console.log('✅ Recording started notification received');
+  }
+  
+  if (message.type === 'RECORDING_STOPPED') {
+    isRecording = false;
+    stopRecordingTimer();
+    updateUI();
+    console.log('✅ Recording stopped notification received');
+  }
+  
+  if (message.type === 'TRANSCRIPT_UPDATED') {
+    transcript = message.transcript;
+    console.log('📝 Transcript updated:', transcript.length, 'segments');
+  }
+  
+  if (message.type === 'MEETING_SAVED') {
+    alert('✅ Meeting saved with AI summary!');
+    transcript = [];
+    audioChunks = [];
+  }
+});
+
+async function startRecording() {
+  try {
+    console.log('🎤 Popup: Sending START_RECORDING message to background...');
+    
+    chrome.runtime.sendMessage({ type: 'START_RECORDING' }, (response) => {
+      console.log('📥 Popup: Response from background:', response);
+      
+      if (response && response.success) {
+        console.log('✅ Popup: Recording started successfully');
+        // UI will be updated by background message listener
+      } else {
+        const errorMessage = response ? response.message : 'Unknown error';
+        console.error('❌ Popup: Recording failed:', errorMessage);
+        
+        let displayMessage = 'Failed to start recording.\n\n';
+        
+        if (errorMessage.includes('NotAllowedError') || errorMessage.includes('denied')) {
+          displayMessage += '🎤 Microphone permission denied.\n\n';
+          displayMessage += 'To fix:\n';
+          displayMessage += '1. Go to chrome://extensions/\n';
+          displayMessage += '2. Find MeetNote extension\n';
+          displayMessage += '3. Click "Details"\n';
+          displayMessage += '4. Scroll to "Site access"\n';
+          displayMessage += '5. Allow microphone permission\n';
+          displayMessage += '6. Reload this page';
+        } else if (errorMessage.includes('NotFoundError')) {
+          displayMessage += '🎤 No microphone found.\n\n';
+          displayMessage += 'Please connect a microphone and try again.';
+        } else {
+          displayMessage += 'Error: ' + errorMessage;
+        }
+        
+        alert(displayMessage);
+      }
+    });
     
   } catch (error) {
-    console.error('❌ Failed to start recording:', error);
-    
-    let errorMessage = 'Failed to start recording.\n\n';
-    
-    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-      errorMessage += '🎤 Microphone access was denied.\n\n';
-      errorMessage += 'To fix this:\n';
-      errorMessage += '1. Click the 🔒 lock icon in the address bar\n';
-      errorMessage += '2. Find "Microphone" permission\n';
-      errorMessage += '3. Change it to "Allow"\n';
-      errorMessage += '4. Reload this page and try again';
-    } else if (error.name === 'NotFoundError') {
-      errorMessage += '🎤 No microphone found.\n\n';
-      errorMessage += 'Please connect a microphone and try again.';
-    } else if (error.name === 'NotReadableError') {
-      errorMessage += '🎤 Microphone is already in use.\n\n';
-      errorMessage += 'Close other apps using the microphone and try again.';
-    } else {
-      errorMessage += 'Error: ' + error.message;
-    }
-    
-    alert(errorMessage);
+    console.error('❌ Popup: Failed to send START_RECORDING:', error);
+    alert('Failed to communicate with background service: ' + error.message);
   }
 }
 
 async function stopRecording() {
-  if (mediaRecorder && isRecording) {
-    mediaRecorder.stop();
-    isRecording = false;
-    stopRecordingTimer();
-    updateUI();
-  }
-}
-
-async function processAudioChunk(chunks) {
   try {
-    console.log('🎵 Processing audio chunks:', chunks.length);
-    const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
-    console.log('📦 Created audio blob:', audioBlob.size, 'bytes');
+    console.log('⏹️ Popup: Sending STOP_RECORDING message to background...');
     
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Audio = reader.result.split(',')[1];
-      console.log('📤 Sending audio to backend for transcription...');
-      await transcribeAudio(base64Audio);
-    };
-    reader.readAsDataURL(audioBlob);
-  } catch (error) {
-    console.error('❌ Failed to process audio chunk:', error);
-  }
-}
-
-async function transcribeAudio(audioData) {
-  try {
-    console.log('🔄 Requesting transcription from background script...');
-    const response = await chrome.runtime.sendMessage({
-      type: 'TRANSCRIBE_AUDIO',
-      audioData: audioData
-    });
-    
-    console.log('📥 Transcription response:', response);
-    
-    if (response && response.success && response.data) {
-      if (response.data.transcript) {
-        // Handle array of transcript segments
-        transcript.push(...response.data.transcript);
-        console.log('✅ Added transcript segments:', response.data.transcript.length);
-      } else if (response.data.text) {
-        // Handle single text response
-        transcript.push({
-          text: response.data.text,
-          timestamp: new Date().toISOString(),
-          speaker: 'Speaker'
-        });
-        console.log('✅ Added transcript text:', response.data.text.substring(0, 50));
-      }
+    chrome.runtime.sendMessage({ type: 'STOP_RECORDING' }, (response) => {
+      console.log('📥 Popup: Stop response from background:', response);
       
-      // Show notification
-      if (transcript.length > 0) {
-        showNotification('Transcription added (' + transcript.length + ' segments)');
+      if (response && response.success) {
+        console.log('✅ Popup: Recording stopped successfully');
+        // UI will be updated by background message listener
+      } else {
+        console.error('❌ Popup: Failed to stop recording:', response?.message);
+        alert('Failed to stop recording: ' + (response?.message || 'Unknown error'));
       }
-    } else if (response && response.error) {
-      console.error('❌ Transcription error from backend:', response.error);
-    }
+    });
+    
   } catch (error) {
-    console.error('❌ Transcription error:', error);
+    console.error('❌ Popup: Failed to send STOP_RECORDING:', error);
+    alert('Failed to communicate with background service: ' + error.message);
   }
 }
 
-async function saveMeeting() {
-  try {
-    const title = prompt('Enter meeting title:', 'Meeting ' + new Date().toLocaleString());
-    if (!title) return;
-    
-    showLoading('Saving meeting...');
-    
-    const response = await chrome.runtime.sendMessage({
-      type: 'SAVE_MEETING',
-      data: { title, transcript }
-    });
-    
-    hideLoading();
-    
-    if (response && response.success) {
-      alert('✅ Meeting saved with AI summary!');
-      transcript = [];
-      audioChunks = [];
-    }
-  } catch (error) {
-    hideLoading();
-    console.error('Save error:', error);
-    alert('Failed to save meeting: ' + error.message);
-  }
-}
+// All recording logic now in background.js - these functions removed
 
 function createHighlight() {
   if (isRecording) {

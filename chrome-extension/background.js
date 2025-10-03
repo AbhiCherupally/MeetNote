@@ -95,82 +95,95 @@ async function saveMeeting(meetingData) {
   return response.json();
 }
 
-// Recording functions
+// Recording functions using tabCapture API
 async function startRecording() {
   try {
-    console.log('🎤 Background: Requesting microphone access...');
+    console.log('🎤 Background: Starting tab audio capture...');
     
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error('Microphone access not supported');
+    // Get the active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab) {
+      throw new Error('No active tab found');
     }
     
-    recordingStream = await navigator.mediaDevices.getUserMedia({ 
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
+    console.log('📹 Background: Capturing audio from tab:', tab.url);
     
-    console.log('✅ Background: Microphone access granted');
-    
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-      ? 'audio/webm;codecs=opus' 
-      : 'audio/webm';
-    
-    mediaRecorder = new MediaRecorder(recordingStream, { mimeType });
-    audioChunks = [];
-    transcript = [];
-    
-    mediaRecorder.ondataavailable = async (event) => {
-      if (event.data.size > 0) {
-        console.log('📦 Background: Audio chunk received:', event.data.size, 'bytes');
-        audioChunks.push(event.data);
-        
-        // Process chunks in batches of 2 (every 10 seconds)
-        if (audioChunks.length >= 2) {
-          await processAudioChunks(audioChunks.slice());
-          audioChunks = [];
+    // Capture audio from the tab (Google Meet, Zoom, etc.)
+    chrome.tabCapture.capture(
+      { 
+        audio: true, 
+        video: false 
+      },
+      (stream) => {
+        if (!stream) {
+          const error = chrome.runtime.lastError;
+          console.error('❌ Background: Tab capture failed:', error);
+          throw new Error(error?.message || 'Tab capture failed');
         }
-      }
-    };
-    
-    mediaRecorder.onstop = async () => {
-      console.log('⏹️ Background: Recording stopped');
-      
-      // Stop all tracks
-      if (recordingStream) {
-        recordingStream.getTracks().forEach(track => track.stop());
-        recordingStream = null;
-      }
-      
-      // Process remaining chunks
-      if (audioChunks.length > 0) {
-        await processAudioChunks(audioChunks.slice());
+        
+        console.log('✅ Background: Tab audio stream captured');
+        recordingStream = stream;
+        
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+          ? 'audio/webm;codecs=opus' 
+          : 'audio/webm';
+        
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
         audioChunks = [];
+        transcript = [];
+        
+        mediaRecorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            console.log('📦 Background: Audio chunk received:', event.data.size, 'bytes');
+            audioChunks.push(event.data);
+            
+            // Process chunks in batches of 2 (every 10 seconds)
+            if (audioChunks.length >= 2) {
+              await processAudioChunks(audioChunks.slice());
+              audioChunks = [];
+            }
+          }
+        };
+        
+        mediaRecorder.onstop = async () => {
+          console.log('⏹️ Background: Recording stopped');
+          
+          // Stop all tracks
+          if (recordingStream) {
+            recordingStream.getTracks().forEach(track => track.stop());
+            recordingStream = null;
+          }
+          
+          // Process remaining chunks
+          if (audioChunks.length > 0) {
+            await processAudioChunks(audioChunks.slice());
+            audioChunks = [];
+          }
+          
+          // Notify popup
+          chrome.runtime.sendMessage({
+            type: 'RECORDING_STOPPED',
+            transcriptLength: transcript.length
+          });
+        };
+        
+        mediaRecorder.onerror = (event) => {
+          console.error('❌ Background: MediaRecorder error:', event.error);
+        };
+        
+        mediaRecorder.start(5000); // Capture every 5 seconds
+        isRecording = true;
+        recordingStartTime = Date.now();
+        
+        console.log('✅ Background: Recording started successfully');
+        
+        // Notify popup
+        chrome.runtime.sendMessage({
+          type: 'RECORDING_STARTED'
+        });
       }
-      
-      // Notify popup
-      chrome.runtime.sendMessage({
-        type: 'RECORDING_STOPPED',
-        transcriptLength: transcript.length
-      });
-    };
-    
-    mediaRecorder.onerror = (event) => {
-      console.error('❌ Background: MediaRecorder error:', event.error);
-    };
-    
-    mediaRecorder.start(5000); // Capture every 5 seconds
-    isRecording = true;
-    recordingStartTime = Date.now();
-    
-    console.log('✅ Background: Recording started successfully');
-    
-    // Notify popup
-    chrome.runtime.sendMessage({
-      type: 'RECORDING_STARTED'
-    });
+    );
     
   } catch (error) {
     console.error('❌ Background: Failed to start recording:', error);

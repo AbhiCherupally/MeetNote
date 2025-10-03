@@ -46,7 +46,30 @@ class MeetNoteContent {
   handleMessage(message, sender, sendResponse) {
     console.log('Content script received message:', message);
     
-    switch (message.type) {\n      case 'REQUEST_SCREEN_CAPTURE':\n        this.requestRealScreenCapture()\n          .then(result => {\n            console.log('\u2705 REAL screen capture successful:', result);\n            sendResponse({ success: true, streamId: result.streamId, audioTracks: result.audioTracks });\n          })\n          .catch(error => {\n            console.error('\u274c REAL screen capture failed:', error);\n            sendResponse({ success: false, error: error.message });\n          });\n        return true; // Keep message channel open\n        \n      case 'STOP_AUDIO_CAPTURE':\n        this.stopAudioCapture();\n        sendResponse({ success: true });\n        break;\n        \n      case 'REAL_TRANSCRIPT_UPDATE':\n        console.log('\ud83d\udcdd Received REAL transcript update:', message.data);\n        this.updateRealTranscriptOverlay(message.data);\n        break;\n        \n      case 'MEETING_DETECTED':
+    switch (message.type) {
+      case 'REQUEST_SCREEN_CAPTURE':
+        this.requestRealScreenCapture()
+          .then(result => {
+            console.log('✅ REAL screen capture successful:', result);
+            sendResponse({ success: true, streamId: result.streamId, audioTracks: result.audioTracks });
+          })
+          .catch(error => {
+            console.error('❌ REAL screen capture failed:', error);
+            sendResponse({ success: false, error: error.message });
+          });
+        return true; // Keep message channel open
+        
+      case 'STOP_AUDIO_CAPTURE':
+        this.stopAudioCapture();
+        sendResponse({ success: true });
+        break;
+        
+      case 'REAL_TRANSCRIPT_UPDATE':
+        console.log('📝 Received REAL transcript update:', message.data);
+        this.updateRealTranscriptOverlay(message.data);
+        break;
+        
+      case 'MEETING_DETECTED':
         this.onMeetingDetected(message);
         break;
         

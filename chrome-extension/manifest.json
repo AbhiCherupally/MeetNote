@@ -89,6 +89,6 @@
   },
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://meetnote.onrender.com https://openrouter.ai wss://meetnote.onrender.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://meetnote-backend.onrender.com https://openrouter.ai wss://meetnote-backend.onrender.com"
   }
 }

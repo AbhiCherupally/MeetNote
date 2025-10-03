@@ -90,15 +90,16 @@ class MeetNoteContent {
         this.startRecordingFromContext();
         break;
         
+      case 'RECORDING_STARTED':
       case 'START_TRANSCRIPT':
-        console.log('📄 Starting transcript overlay');
+        console.log('📄 Recording started - showing transcript overlay');
         this.showTranscriptOverlay();
         this.isRecording = true;
         break;
         
+      case 'RECORDING_STOPPED':
       case 'STOP_TRANSCRIPT':
-        console.log('📄 Stopping transcript overlay');
-        this.hideTranscriptOverlay();
+        console.log('📄 Recording stopped - keeping transcript overlay visible');
         this.isRecording = false;
         break;
 
@@ -106,8 +107,10 @@ class MeetNoteContent {
         this.toggleTranscriptOverlay();
         break;
         
+      case 'TRANSCRIPT_UPDATED':
       case 'UPDATE_TRANSCRIPT':
-        this.updateTranscriptContent(message.data);
+        console.log('📝 Updating transcript with new data:', message.transcript || message.data);
+        this.updateTranscriptContent(message.transcript || message.data);
         break;
 
       default:
@@ -470,6 +473,40 @@ class MeetNoteContent {
 
     content.insertAdjacentHTML('beforeend', lineHtml);
     content.scrollTop = content.scrollHeight;
+  }
+
+  updateTranscriptContent(transcript) {
+    const content = document.getElementById('meetnote-transcript-content');
+    if (!content) {
+      console.log('⚠️ Transcript content element not found, showing overlay first');
+      this.showTranscriptOverlay();
+      return;
+    }
+
+    if (!transcript || transcript.length === 0) {
+      content.innerHTML = '<div class="meetnote-transcript-message">Listening for audio...</div>';
+      return;
+    }
+
+    // Clear existing content
+    content.innerHTML = '';
+
+    // Show last 10 segments
+    const recentSegments = transcript.slice(-10);
+    
+    recentSegments.forEach(segment => {
+      const lineHtml = `
+        <div class="meetnote-transcript-line">
+          <span class="meetnote-transcript-speaker">${segment.speaker || 'Speaker'}:</span>
+          <span class="meetnote-transcript-text">${segment.text}</span>
+        </div>
+      `;
+      content.insertAdjacentHTML('beforeend', lineHtml);
+    });
+
+    // Auto-scroll to bottom
+    content.scrollTop = content.scrollHeight;
+    console.log('✅ Transcript UI updated with', recentSegments.length, 'segments');
   }
 
   updateRecordingUI() {

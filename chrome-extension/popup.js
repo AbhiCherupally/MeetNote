@@ -13,7 +13,8 @@ const API_URL = 'https://meetnote-backend.onrender.com/api';
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  checkBackendStatus();
+  await checkBackendStatus();
+  await checkCurrentTab();
   setupEventListeners();
   updateUI();
 }
@@ -34,7 +35,6 @@ async function checkBackendStatus() {
     if (response.ok) {
       statusDot.className = 'status-dot online';
       statusText.textContent = 'Connected';
-      document.getElementById('recordBtn').disabled = false;
     } else {
       throw new Error('Backend not responding');
     }
@@ -43,6 +43,94 @@ async function checkBackendStatus() {
     statusText.textContent = 'Backend Offline';
     console.error('Backend connection failed:', error);
   }
+}
+
+async function checkCurrentTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const url = tab.url;
+    
+    console.log('🔍 Checking current tab:', url);
+    
+    const meetingInfo = detectMeetingFromUrl(url);
+    
+    if (meetingInfo) {
+      console.log('✅ Meeting detected:', meetingInfo);
+      showMeetingDetected(meetingInfo);
+    } else {
+      console.log('⚠️ No meeting detected');
+      showNoMeeting();
+    }
+  } catch (error) {
+    console.error('❌ Failed to check current tab:', error);
+    showNoMeeting();
+  }
+}
+
+function detectMeetingFromUrl(url) {
+  if (!url) return null;
+  
+  const patterns = {
+    'google-meet': {
+      pattern: /meet\.google\.com\/[a-z0-9-]+/i,
+      name: 'Google Meet',
+      icon: '📹'
+    },
+    'zoom': {
+      pattern: /zoom\.us\/j\/\d+/,
+      name: 'Zoom',
+      icon: '🎥'
+    },
+    'teams': {
+      pattern: /teams\.microsoft\.com/,
+      name: 'Microsoft Teams',
+      icon: '💼'
+    },
+    'webex': {
+      pattern: /webex\.com/,
+      name: 'Webex',
+      icon: '🎦'
+    }
+  };
+  
+  for (const [platform, config] of Object.entries(patterns)) {
+    if (config.pattern.test(url)) {
+      return {
+        platform,
+        name: config.name,
+        icon: config.icon,
+        url
+      };
+    }
+  }
+  
+  return null;
+}
+
+function showMeetingDetected(meetingInfo) {
+  const noMeeting = document.getElementById('noMeeting');
+  const meetingSection = document.getElementById('meetingInfo');
+  
+  noMeeting.style.display = 'none';
+  meetingSection.style.display = 'block';
+  
+  document.getElementById('platformName').textContent = meetingInfo.name;
+  document.getElementById('meetingTitle').textContent = 'Meeting in progress';
+  
+  // Enable recording button
+  document.getElementById('recordBtn').disabled = false;
+  
+  console.log('✅ Meeting UI updated:', meetingInfo.name);
+}
+
+function showNoMeeting() {
+  const noMeeting = document.getElementById('noMeeting');
+  const meetingSection = document.getElementById('meetingInfo');
+  
+  noMeeting.style.display = 'block';
+  meetingSection.style.display = 'none';
+  
+  console.log('ℹ️ No meeting UI shown');
 }
 
 async function toggleRecording() {

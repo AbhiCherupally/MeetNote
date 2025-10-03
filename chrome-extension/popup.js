@@ -56,11 +56,32 @@ async function toggleRecording() {
 async function startRecording() {
   try {
     console.log('🎤 Requesting microphone access...');
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    // Check if microphone permission is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Microphone access not supported in this browser');
+    }
+    
+    // Request microphone access
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+    
     console.log('✅ Microphone access granted');
     
+    // Check MediaRecorder support
+    if (!MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      console.warn('⚠️ Opus codec not supported, using default');
+    }
+    
     mediaRecorder = new MediaRecorder(stream, { 
-      mimeType: 'audio/webm;codecs=opus'
+      mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : 'audio/webm'
     });
     
     mediaRecorder.ondataavailable = (event) => {
@@ -91,15 +112,41 @@ async function startRecording() {
       }
     };
     
+    mediaRecorder.onerror = (event) => {
+      console.error('❌ MediaRecorder error:', event.error);
+      alert('Recording error: ' + event.error.name);
+    };
+    
     mediaRecorder.start(5000); // Capture every 5 seconds
     isRecording = true;
     recordingStartTime = Date.now();
     startRecordingTimer();
     updateUI();
     console.log('✅ Recording started successfully');
+    
   } catch (error) {
     console.error('❌ Failed to start recording:', error);
-    alert('Failed to start recording. Please allow microphone access.\n\nError: ' + error.message);
+    
+    let errorMessage = 'Failed to start recording.\n\n';
+    
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      errorMessage += '🎤 Microphone access was denied.\n\n';
+      errorMessage += 'To fix this:\n';
+      errorMessage += '1. Click the 🔒 lock icon in the address bar\n';
+      errorMessage += '2. Find "Microphone" permission\n';
+      errorMessage += '3. Change it to "Allow"\n';
+      errorMessage += '4. Reload this page and try again';
+    } else if (error.name === 'NotFoundError') {
+      errorMessage += '🎤 No microphone found.\n\n';
+      errorMessage += 'Please connect a microphone and try again.';
+    } else if (error.name === 'NotReadableError') {
+      errorMessage += '🎤 Microphone is already in use.\n\n';
+      errorMessage += 'Close other apps using the microphone and try again.';
+    } else {
+      errorMessage += 'Error: ' + error.message;
+    }
+    
+    alert(errorMessage);
   }
 }
 

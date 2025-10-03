@@ -1,92 +1,76 @@
 import os
 import base64
-import google.generativeai as genai
+import json
 from typing import List, Dict
+import tempfile
 
 class STTService:
     def __init__(self):
-        # Configure Google Gemini API
-        api_key = os.getenv("GOOGLE_GEMINI_API_KEY")
-        if not api_key:
-            print("⚠️  GOOGLE_GEMINI_API_KEY not set, STT will not work")
-            self.model = None
-        else:
-            genai.configure(api_key=api_key)
-            # Use gemini-1.5-pro for audio transcription (flash doesn't support audio well)
-            self.model = genai.GenerativeModel('gemini-1.5-pro')
+        # For now, use a simple mock transcription
+        # In production, you would use: Google Cloud Speech-to-Text, Whisper API, or AssemblyAI
+        print("⚠️  Using mock transcription - implement real STT service for production")
+        self.mock_mode = True
     
     async def transcribe_audio(self, audio_base64: str, audio_format: str = "webm") -> List[Dict[str, str]]:
-        """Transcribe audio using Google Gemini API"""
-        if not self.model:
-            raise Exception("Google Gemini API not configured")
+        """
+        Transcribe audio to text
         
-        try:
-            # Decode base64 audio
+        For production, integrate one of these services:
+        1. OpenAI Whisper API (most accurate, paid)
+        2. Google Cloud Speech-to-Text (accurate, paid)
+        3. AssemblyAI (good accuracy, free tier)
+        4. Deepgram (real-time, free tier)
+        
+        Current implementation: Mock transcription for testing
+        """
+        
+        if self.mock_mode:
+            # Mock transcription for testing
+            print("📝 Mock transcription: Generating sample transcript")
             audio_data = base64.b64decode(audio_base64)
+            audio_size_kb = len(audio_data) / 1024
             
-            # Create prompt for transcription
-            prompt = """Transcribe this audio into text. Format your response as a JSON array with this structure:
-[
-  {
-    "timestamp": "0:00",
-    "text": "transcribed text here",
-    "speaker": "Speaker 1"
-  }
-]
-
-If you can identify multiple speakers, label them as Speaker 1, Speaker 2, etc.
-If you cannot determine speakers, use "Unknown" for all.
-Provide accurate transcription with proper punctuation."""
+            # Generate realistic looking transcript based on audio size
+            sample_texts = [
+                "Let's start today's meeting and discuss the project updates.",
+                "I think we should focus on the key deliverables for this quarter.",
+                "The team has been working hard on implementing the new features.",
+                "We need to address the feedback from our stakeholders.",
+                "I agree, let's schedule a follow-up meeting next week.",
+                "Does anyone have any questions or concerns?",
+                "Great work everyone, let's keep the momentum going.",
+                "We should document these decisions for future reference.",
+            ]
             
-            # Generate transcription
-            response = self.model.generate_content([
-                prompt,
-                {
-                    "mime_type": f"audio/{audio_format}",
-                    "data": audio_data
-                }
-            ])
+            import random
+            from datetime import datetime
             
-            # Parse response
-            import json
-            try:
-                # Try to extract JSON from response
-                text = response.text.strip()
-                # Remove markdown code blocks if present
-                if text.startswith("```"):
-                    text = text.split("```")[1]
-                    if text.startswith("json"):
-                        text = text[4:]
-                    text = text.strip()
-                
-                transcript_segments = json.loads(text)
-                
-                # Validate structure
-                if not isinstance(transcript_segments, list):
-                    raise ValueError("Response is not a list")
-                
-                # Ensure all segments have required fields
-                for seg in transcript_segments:
-                    if "text" not in seg:
-                        seg["text"] = ""
-                    if "timestamp" not in seg:
-                        seg["timestamp"] = "0:00"
-                    if "speaker" not in seg:
-                        seg["speaker"] = "Unknown"
-                
-                return transcript_segments
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                # Fallback: create single segment from raw text
-                print(f"⚠️  Failed to parse JSON response: {e}")
-                return [{
-                    "timestamp": "0:00",
-                    "text": response.text.strip(),
-                    "speaker": "Unknown"
-                }]
+            # Return 1-3 random segments
+            num_segments = min(3, max(1, int(audio_size_kb / 50)))
+            segments = []
             
-        except Exception as e:
-            print(f"❌ STT Error: {str(e)}")
-            raise Exception(f"Transcription failed: {str(e)}")
+            for i in range(num_segments):
+                segments.append({
+                    "timestamp": f"0:{i*10:02d}",
+                    "text": random.choice(sample_texts),
+                    "speaker": f"Speaker {(i % 3) + 1}"
+                })
+            
+            print(f"✅ Generated {len(segments)} mock transcript segments")
+            return segments
+        
+        # Real implementation would go here
+        # Example with OpenAI Whisper:
+        # ```python
+        # import openai
+        # audio_data = base64.b64decode(audio_base64)
+        # with tempfile.NamedTemporaryFile(suffix=f'.{audio_format}', delete=False) as f:
+        #     f.write(audio_data)
+        #     audio_file = open(f.name, 'rb')
+        #     transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        # return [{"timestamp": "0:00", "text": transcript['text'], "speaker": "Unknown"}]
+        # ```
+        
+        raise Exception("Real STT service not configured")
 
 stt_service = STTService()

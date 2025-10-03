@@ -11,3 +11,4 @@ python-multipart==0.0.12
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
 alembic==1.13.1
+assemblyai==0.17.0

@@ -1,19 +1,18 @@
-# Netlify Deployment Configuration
+# Netlify Deployment Configuration for Next.js
 
 [build]
   # Base directory for build
   base = "frontend"
   
-  # Build Command
-  command = "npm run build"
+  # Build Command - Next.js build
+  command = "npm install && npm run build"
   
-  # Publish Directory for Next.js static export
-  publish = "out"
+  # Publish Directory for Next.js
+  publish = ".next"
 
   # Environment Variables
   [build.environment]
     NEXT_PUBLIC_API_URL = "https://meetnote-backend.onrender.com"
-    NEXT_PUBLIC_WS_URL = "wss://meetnote-backend.onrender.com"
     NODE_ENV = "production"
   
 # No redirects needed for static export - Netlify serves files directly

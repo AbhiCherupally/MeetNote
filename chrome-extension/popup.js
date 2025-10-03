@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   await checkBackendStatus();
   await checkCurrentTab();
+  await checkRecordingStatus(); // Check if already recording
   setupEventListeners();
   updateUI();
 }
@@ -42,6 +43,34 @@ async function checkBackendStatus() {
     statusDot.className = 'status-dot offline';
     statusText.textContent = 'Backend Offline';
     console.error('Backend connection failed:', error);
+  }
+}
+
+async function checkRecordingStatus() {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'GET_RECORDING_STATUS' });
+    if (response && response.isRecording) {
+      isRecording = true;
+      recordingStartTime = Date.now() - response.duration;
+      startRecordingTimer();
+      console.log('✅ Restored recording state:', response);
+    }
+  } catch (error) {
+    console.error('❌ Failed to check recording status:', error);
+  }
+}
+
+async function checkRecordingStatus() {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'GET_RECORDING_STATUS' });
+    if (response && response.isRecording) {
+      isRecording = true;
+      recordingStartTime = Date.now() - response.duration;
+      startRecordingTimer();
+      console.log('✅ Restored recording state');
+    }
+  } catch (error) {
+    console.error('❌ Failed to check recording status:', error);
   }
 }
 

@@ -144,6 +144,15 @@ async function startRecording() {
       type: 'RECORDING_STARTED'
     });
     
+    // Notify content script for live transcript
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'RECORDING_STARTED'
+        }).catch(() => console.log('Content script not ready'));
+      }
+    });
+    
   } catch (error) {
     console.error('❌ Background: Failed to start recording:', error);
     throw error;
@@ -242,6 +251,16 @@ async function processAudioChunk(base64Audio) {
       chrome.runtime.sendMessage({
         type: 'TRANSCRIPT_UPDATED',
         transcript: transcript
+      });
+      
+      // Notify content script for live display
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'TRANSCRIPT_UPDATED',
+            transcript: transcript
+          }).catch(() => console.log('Content script not ready'));
+        }
       });
     }
   } catch (error) {

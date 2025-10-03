@@ -49,6 +49,16 @@ body {
   font-weight: 600;
 }
 
+.version-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-left: 4px;
+}
+
 .status-indicator {
   display: flex;
   align-items: center;
@@ -60,9 +70,23 @@ body {
 .status-dot {
   width: 8px;
   height: 8px;
-  background: #4ade80;
   border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.status-dot.connecting {
+  background: #fbbf24;
   animation: pulse 2s infinite;
+}
+
+.status-dot.connected {
+  background: #4ade80;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.error {
+  background: #ef4444;
+  animation: none;
 }
 
 @keyframes pulse {
@@ -86,7 +110,21 @@ body {
 
 .auth-content p {
   color: #6b7280;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+
+.demo-credentials {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.demo-credentials small {
+  color: #0369a1;
+  font-size: 12px;
 }
 
 .form-group {

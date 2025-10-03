@@ -1,31 +1,27 @@
 services:
   - type: web
     name: meetnote-backend
-    env: docker
-    region: oregon
+    runtime: python
     plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: ./
-    healthCheckPath: /api/health
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: ENVIRONMENT
-        value: production
-      - key: PORT
-        value: 10000
-      - key: ASSEMBLYAI_API_KEY
-        sync: false  # Set this in Render dashboard
+      - key: GOOGLE_GEMINI_API_KEY
+        sync: false
       - key: OPENROUTER_API_KEY
-        sync: false  # Set this in Render dashboard
+        sync: false
       - key: DATABASE_URL
-        sync: false  # Set this to your PostgreSQL connection string
-      - key: JWT_SECRET_KEY
-        sync: false  # Generate and set a secure secret key
-    scaling:
-      minInstances: 1
-      maxInstances: 2
-
+        fromDatabase:
+          name: meetnote
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /health
+    
 databases:
-  - name: meetnote-database
+  - name: meetnote
     databaseName: meetnote
     user: meetnote_user
     plan: free
+    region: oregon

@@ -1,79 +1,42 @@
-# MeetNote Backend API
+# MeetNote Backend
 
-A clean, production-ready Node.js backend for the MeetNote AI meeting assistant.
+Clean Python FastAPI backend with Google STT and OpenRouter Mistral 7B for summarization.
 
-## ✨ Features
+## Setup
 
-- **Authentication**: JWT-based user registration and login
-- **Meeting Management**: Create, start, end meetings
-- **AI Integration**: OpenRouter AI analysis with Mistral 7B
-- **Real-time Updates**: Socket.IO for live transcription
-- **Chrome Extension Support**: Dedicated API endpoints
-- **Production Ready**: Optimized for Render deployment
-
-## 🚀 Quick Start
-
-### Local Development
+1. Install dependencies:
 ```bash
-npm install
-npm run dev
+pip install -r requirements.txt
 ```
 
-### Production Deployment
+2. Configure environment variables:
 ```bash
-npm start
+cp .env.example .env
+# Edit .env with your API keys
 ```
 
-## 📋 API Endpoints
+3. Run the server:
+```bash
+uvicorn main:app --reload --port 8000
+```
 
-### Health Check
-- `GET /health` - Server health status
+## API Endpoints
 
-### Authentication  
+### Auth
 - `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/me` - Get current user
 
 ### Meetings
-- `GET /api/meetings` - Get user meetings
-- `POST /api/meetings` - Create new meeting
-- `POST /api/meetings/:id/start` - Start meeting
-- `POST /api/meetings/:id/end` - End meeting  
-- `POST /api/meetings/:id/analyze` - AI analysis
+- `POST /api/meetings/transcribe` - Transcribe audio to text
+- `POST /api/meetings/create` - Create meeting with summary
+- `GET /api/meetings/` - Get all meetings
+- `GET /api/meetings/{id}` - Get specific meeting
+- `DELETE /api/meetings/{id}` - Delete meeting
 
-### Extension
-- `POST /api/extension/detect-meeting` - Detect meeting platform
+## Architecture
 
-## 🔧 Environment Variables
-
-```env
-NODE_ENV=production
-PORT=10000
-JWT_SECRET=your-jwt-secret
-OPENROUTER_API_KEY=your-openrouter-key
-ASSEMBLYAI_API_KEY=your-assemblyai-key
-CORS_ORIGIN=https://your-frontend-url
-```
-
-## 🌐 Render Deployment
-
-1. Connect GitHub repository
-2. Set environment variables
-3. Deploy automatically
-
-**Build Command**: `npm install`
-**Start Command**: `npm start`
-
-## 🔒 Security Features
-
-- Helmet.js security headers
-- CORS protection
-- Rate limiting
-- JWT token authentication
-- Input validation
-
-## 📊 Monitoring
-
-- Health check endpoint at `/health`
-- Request logging with Morgan
-- Error handling middleware
-- Graceful shutdown handling
+- **STT**: Google Cloud Speech-to-Text API
+- **Summarization**: OpenRouter Mistral 7B (free tier)
+- **Storage**: In-memory (upgrade to PostgreSQL later)
+- **Auth**: Simple demo tokens (upgrade to JWT later)

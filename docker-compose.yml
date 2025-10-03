@@ -5,44 +5,26 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: meetnote-backend
     ports:
       - "8000:8000"
     environment:
+      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
       - PORT=8000
-      - ENVIRONMENT=development
-      - ASSEMBLYAI_API_KEY=598c0c5952444246ba2c1af3eb010d0b
-      - JWT_SECRET_KEY=dev_secret_key_12345
-      - DATABASE_URL=postgresql://postgres:password@db:5432/meetnote
-    depends_on:
-      - db
+      - HOST=0.0.0.0
     volumes:
       - ./backend:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     networks:
       - meetnote-network
-
-  db:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=meetnote
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - meetnote-network
-
-  # Optional: Redis for session management
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - meetnote-network
-
-volumes:
-  postgres_data:
 
 networks:
   meetnote-network:

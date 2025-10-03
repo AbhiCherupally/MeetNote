@@ -10,21 +10,25 @@
     <div class="popup-container">
         <!-- Header -->
         <div class="header">
-                    <div class="logo">
-            <img src="icons/icon.svg" alt="MeetNote" class="logo-icon">
-            <span class="logo-text">MeetNote</span>
-        </div>
+            <div class="logo">
+                <img src="icons/icon.svg" alt="MeetNote" class="logo-icon">
+                <span class="logo-text">MeetNote</span>
+                <span class="version-badge">v2.0</span>
+            </div>
             <div class="status-indicator" id="statusIndicator">
-                <span class="status-dot"></span>
-                <span class="status-text">Ready</span>
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Connecting...</span>
             </div>
         </div>
 
         <!-- Authentication Section -->
         <div class="auth-section" id="authSection" style="display: none;">
             <div class="auth-content">
-                <h3>Sign In to MeetNote</h3>
-                <p>Connect your account to start recording meetings</p>
+                <h3>Welcome to MeetNote AI</h3>
+                <p>Sign in to start recording and transcribing your meetings with AI-powered insights</p>
+                <div class="demo-credentials" id="demoCredentials">
+                    <small><strong>Demo Account:</strong> abhi@meetnote.app / admin123</small>
+                </div>
                 
                 <form id="loginForm">
                     <div class="form-group">

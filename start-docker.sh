@@ -1,100 +1,65 @@
 #!/bin/bash
-set -e
 
-echo "🐳 MeetNote Docker Setup & Start"
-echo "================================"
+echo "🐳 MeetNote Docker Startup"
+echo "=========================="
+echo ""
 
-# Function to check if Docker is running
-check_docker() {
-    if ! docker info > /dev/null 2>&1; then
-        echo "❌ Docker is not running. Please start Docker Desktop and try again."
-        exit 1
-    fi
-    echo "✅ Docker is running"
-}
+# Check if Docker is running
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Docker is not running. Please start Docker Desktop first."
+    exit 1
+fi
 
-# Function to build and start services
-start_services() {
-    echo "📦 Building Docker containers..."
-    docker-compose build --no-cache
-
-    echo "🚀 Starting MeetNote services..."
-    docker-compose up -d
-
-    echo "⏱️  Waiting for services to be ready..."
-    sleep 10
-
-    # Check if backend is healthy
-    if curl -f http://localhost:8000/api/health > /dev/null 2>&1; then
-        echo "✅ Backend is healthy!"
-        echo "🌐 Backend available at: http://localhost:8000"
-        echo "📊 Health check: http://localhost:8000/api/health"
-        echo "💾 Database available at: localhost:5432"
-    else
-        echo "⚠️  Backend may still be starting up..."
-        echo "🔍 Check logs with: docker-compose logs backend"
-    fi
-
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo "⚠️  No .env file found. Creating from template..."
+    cp .env.docker .env
+    echo "✅ Created .env file. Please edit it with your API keys:"
+    echo "   - OPENROUTER_API_KEY"
     echo ""
-    echo "📱 To test the Chrome Extension:"
-    echo "1. Update background.js to use: http://localhost:8000"
-    echo "2. Load extension in Chrome developer mode"
-    echo "3. Join a meeting and test recording"
+    echo "Then run this script again."
+    exit 1
+fi
+
+# Check if API keys are set in .env
+if ! grep -q "GOOGLE_GEMINI_API_KEY=.*[a-zA-Z0-9]" .env; then
+    echo "⚠️  GOOGLE_GEMINI_API_KEY not set in .env!"
+    echo "   Get your free API key from: https://aistudio.google.com/app/apikey"
     echo ""
-    echo "🛑 To stop: docker-compose down"
-    echo "📊 View logs: docker-compose logs -f"
-}
+fi
 
-# Function to show logs
-show_logs() {
-    echo "📊 Showing real-time logs..."
-    docker-compose logs -f
-}
+if ! grep -q "OPENROUTER_API_KEY=.*[a-zA-Z0-9]" .env; then
+    echo "⚠️  OPENROUTER_API_KEY not set in .env!"
+    echo "   Get your free API key from: https://openrouter.ai"
+    echo ""
+fi
 
-# Function to stop services
-stop_services() {
-    echo "🛑 Stopping MeetNote services..."
-    docker-compose down
-    echo "✅ Services stopped"
-}
+# Build and start
+echo "🔨 Building Docker containers..."
+docker-compose build
 
-# Function to clean up
-cleanup() {
-    echo "🧹 Cleaning up Docker resources..."
-    docker-compose down -v
-    docker system prune -f
-    echo "✅ Cleanup complete"
-}
+echo ""
+echo "🚀 Starting MeetNote backend..."
+docker-compose up -d
 
-# Main menu
-case "${1:-start}" in
-    "start")
-        check_docker
-        start_services
-        ;;
-    "stop")
-        stop_services
-        ;;
-    "logs")
-        show_logs
-        ;;
-    "cleanup")
-        cleanup
-        ;;
-    "restart")
-        stop_services
-        check_docker
-        start_services
-        ;;
-    *)
-        echo "Usage: $0 {start|stop|logs|cleanup|restart}"
-        echo ""
-        echo "Commands:"
-        echo "  start    - Build and start all services (default)"
-        echo "  stop     - Stop all services"
-        echo "  logs     - Show real-time logs"
-        echo "  cleanup  - Stop services and clean up Docker resources"
-        echo "  restart  - Restart all services"
-        exit 1
-        ;;
-esac
+echo ""
+echo "⏳ Waiting for backend to be ready..."
+sleep 5
+
+# Check health
+if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+    echo ""
+    echo "✅ MeetNote backend is running!"
+    echo ""
+    echo "📍 API: http://localhost:8000"
+    echo "📖 Docs: http://localhost:8000/docs"
+    echo ""
+    echo "💡 Useful commands:"
+    echo "   docker-compose logs -f       # View logs"
+    echo "   docker-compose down          # Stop services"
+    echo "   docker-compose restart       # Restart services"
+else
+    echo ""
+    echo "⚠️  Backend may not be ready yet. Check logs:"
+    echo "   docker-compose logs -f backend"
+fi

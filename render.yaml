@@ -7,8 +7,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: GOOGLE_GEMINI_API_KEY
-        sync: false
+      - key: ASSEMBLYAI_API_KEY
+        value: 598c0c5952444246ba2c1af3eb010d0b
       - key: OPENROUTER_API_KEY
         sync: false
       - key: DATABASE_URL

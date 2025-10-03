@@ -141,11 +141,8 @@ class STTService:
     
     async def _mock_transcribe(self, audio_data: bytes) -> List[Dict[str, str]]:
         """Mock transcription for testing when API key not available"""
-        if self.mock_mode:
-            # Mock transcription for testing
-            print("📝 Mock transcription: Generating sample transcript")
-            audio_data = base64.b64decode(audio_base64)
-            audio_size_kb = len(audio_data) / 1024
+        print("📝 Mock transcription: Generating sample transcript")
+        audio_size_kb = len(audio_data) / 1024
             
             # Generate realistic looking transcript based on audio size
             sample_texts = [

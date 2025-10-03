@@ -30,6 +30,11 @@ class STTService:
             if self.mock_mode:
                 return await self._mock_transcribe(audio_data)
             
+            # Check audio size (min 100 bytes for valid audio)
+            if len(audio_data) < 100:
+                print(f"⚠️  Audio too small ({len(audio_data)} bytes), using mock")
+                return await self._mock_transcribe(audio_data)
+            
             # Save to temporary file
             with tempfile.NamedTemporaryFile(suffix=f'.{audio_format}', delete=False) as temp_file:
                 temp_file.write(audio_data)
@@ -44,11 +49,16 @@ class STTService:
                     upload_response = requests.post(
                         self.upload_url,
                         headers=headers,
-                        data=f
+                        data=f,
+                        timeout=30
                     )
                 
+                print(f"📡 Upload response: {upload_response.status_code}")
+                
                 if upload_response.status_code != 200:
-                    raise Exception(f"Upload failed: {upload_response.text}")
+                    error_msg = upload_response.text
+                    print(f"❌ Upload error: {error_msg}")
+                    raise Exception(f"Upload failed: {error_msg}")
                 
                 audio_url = upload_response.json()['upload_url']
                 print(f"✅ Audio uploaded: {audio_url}")

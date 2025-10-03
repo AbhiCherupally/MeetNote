@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Header
-from typing import Optional
+from fastapi import APIRouter, HTTPException, Header, Body
+from typing import Optional, List, Dict
+from pydantic import BaseModel
 import uuid
 from datetime import datetime
 
@@ -9,6 +10,9 @@ from services.summarization import summarization_service
 from services.storage import storage_service
 
 router = APIRouter()
+
+class CreateMeetingRequest(BaseModel):
+    transcript: List[Dict]
 
 @router.post("/transcribe")
 async def transcribe_audio(request: TranscribeRequest, authorization: Optional[str] = Header(None)):
@@ -29,16 +33,22 @@ async def transcribe_audio(request: TranscribeRequest, authorization: Optional[s
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from pydantic import BaseModel
+
+class CreateMeetingRequest(BaseModel):
+    transcript: list
+
 @router.post("/create")
 async def create_meeting(
     title: str,
-    transcript: list,
+    request: CreateMeetingRequest,
     authorization: Optional[str] = Header(None)
 ):
     """Create a meeting with transcript and generate summary"""
     try:
         # In production, extract user_id from JWT token
         user_id = "demo-user"
+        transcript = request.transcript
         
         # Generate summary and action items
         summary, action_items = await summarization_service.summarize_transcript(transcript)

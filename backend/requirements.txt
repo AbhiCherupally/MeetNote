@@ -12,3 +12,6 @@ sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
 alembic==1.13.1
 assemblyai==0.17.0
+openai-whisper==20231117
+torch==2.0.1
+torchaudio==2.0.2

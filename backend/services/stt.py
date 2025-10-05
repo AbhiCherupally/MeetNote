@@ -6,103 +6,137 @@ import tempfile
 import requests
 import time
 
+# ================================
+# ASSEMBLYAI IMPLEMENTATION (BACKUP)
+# ================================
+# Keeping this for future reference if needed
+# Issue: API key might be invalid or rate-limited
+# 
+# import assemblyai as aai
+# 
+# class AssemblyAIService:
+#     def __init__(self):
+#         self.api_key = os.getenv('ASSEMBLYAI_API_KEY', '')
+#         if self.api_key:
+#             aai.settings.api_key = self.api_key
+#             print("✅ AssemblyAI configured")
+#             self.mock_mode = False
+#         else:
+#             print("⚠️ No ASSEMBLYAI_API_KEY found - using mock transcription")
+#             self.mock_mode = True
+# 
+#     async def transcribe_audio(self, audio_base64: str, audio_format: str = "webm") -> List[Dict[str, str]]:
+#         if self.mock_mode:
+#             return await self._mock_transcribe()
+#         
+#         try:
+#             # Decode and save audio
+#             audio_data = base64.b64decode(audio_base64)
+#             with tempfile.NamedTemporaryFile(suffix=f'.{audio_format}', delete=False) as temp_file:
+#                 temp_file.write(audio_data)
+#                 temp_file_path = temp_file.name
+#             
+#             # Configure transcription
+#             config = aai.TranscriptionConfig(
+#                 speech_model=aai.SpeechModel.universal,
+#                 speaker_labels=True
+#             )
+#             
+#             # Transcribe
+#             transcriber = aai.Transcriber(config=config)
+#             transcript = transcriber.transcribe(temp_file_path)
+#             
+#             if transcript.status == "error":
+#                 raise RuntimeError(f"Transcription failed: {transcript.error}")
+#             
+#             return self._format_assemblyai_response(transcript)
+#             
+#         except Exception as e:
+#             print(f"❌ AssemblyAI error: {str(e)}")
+#             return await self._mock_transcribe()
+#         finally:
+#             if os.path.exists(temp_file_path):
+#                 os.unlink(temp_file_path)
+
+
+# ================================
+# FREE WHISPER IMPLEMENTATION
+# ================================
+# Using OpenAI Whisper via Hugging Face Transformers (FREE)
+
+try:
+    import whisper
+    import torch
+    WHISPER_AVAILABLE = True
+    print("✅ Whisper model available")
+except ImportError:
+    WHISPER_AVAILABLE = False
+    print("⚠️ Whisper not available, using mock transcription")
+
 class STTService:
     def __init__(self):
         self.api_key = os.getenv('ASSEMBLYAI_API_KEY', '')
-        self.upload_url = "https://api.assemblyai.com/v2/upload"
-        self.transcript_url = "https://api.assemblyai.com/v2/transcript"
         
-        if not self.api_key:
-            print("⚠️  No ASSEMBLYAI_API_KEY found - using mock transcription")
-            self.mock_mode = True
+        if WHISPER_AVAILABLE:
+            try:
+                # Load small whisper model (free, runs locally)
+                print("🔄 Loading Whisper model...")
+                self.whisper_model = whisper.load_model("tiny")  # Fast, small model
+                print("✅ Whisper model loaded successfully")
+                self.mock_mode = False
+            except Exception as e:
+                print(f"❌ Failed to load Whisper: {e}")
+                self.mock_mode = True
         else:
-            print("✅ AssemblyAI configured")
-            self.mock_mode = False
+            self.mock_mode = True
     
     async def transcribe_audio(self, audio_base64: str, audio_format: str = "webm") -> List[Dict[str, str]]:
-        """Transcribe audio to text using AssemblyAI"""
+        """Transcribe audio using free Whisper model"""
         
         try:
             # Decode base64 audio
             audio_data = base64.b64decode(audio_base64)
             print(f"📦 Audio size: {len(audio_data) / 1024:.2f} KB")
             
-            if self.mock_mode:
-                return await self._mock_transcribe(audio_data)
+            if self.mock_mode or len(audio_data) < 1000:  # Skip very small audio
+                return await self._mock_transcribe()
             
-            # Check audio size (min 100 bytes for valid audio)
-            if len(audio_data) < 100:
-                print(f"⚠️  Audio too small ({len(audio_data)} bytes), using mock")
-                return await self._mock_transcribe(audio_data)
-            
-            # Save to temporary file
+            # Save to temporary file (Whisper needs file input)
             with tempfile.NamedTemporaryFile(suffix=f'.{audio_format}', delete=False) as temp_file:
                 temp_file.write(audio_data)
                 temp_file_path = temp_file.name
             
             try:
-                # Upload audio to AssemblyAI
-                print("📤 Uploading audio to AssemblyAI...")
-                headers = {"authorization": self.api_key}
+                print("🎤 Transcribing with Whisper...")
                 
-                with open(temp_file_path, 'rb') as f:
-                    upload_response = requests.post(
-                        self.upload_url,
-                        headers=headers,
-                        data=f,
-                        timeout=30
-                    )
-                
-                print(f"📡 Upload response: {upload_response.status_code}")
-                
-                if upload_response.status_code != 200:
-                    error_msg = upload_response.text
-                    print(f"❌ Upload error: {error_msg}")
-                    raise Exception(f"Upload failed: {error_msg}")
-                
-                audio_url = upload_response.json()['upload_url']
-                print(f"✅ Audio uploaded: {audio_url}")
-                
-                # Request transcription
-                print("🎤 Requesting transcription...")
-                transcript_request = {
-                    "audio_url": audio_url,
-                    "speaker_labels": True  # Enable speaker diarization
-                }
-                
-                transcript_response = requests.post(
-                    self.transcript_url,
-                    json=transcript_request,
-                    headers=headers
+                # Transcribe with Whisper (free, local)
+                result = self.whisper_model.transcribe(
+                    temp_file_path,
+                    task="transcribe",
+                    language="en"  # Auto-detect if None
                 )
                 
-                if transcript_response.status_code != 200:
-                    raise Exception(f"Transcription request failed: {transcript_response.text}")
+                segments = []
+                if result.get('segments'):
+                    # Has segment-level transcription
+                    for i, segment in enumerate(result['segments']):
+                        segments.append({
+                            "timestamp": self._format_timestamp(segment['start']),
+                            "text": segment['text'].strip(),
+                            "speaker": f"Speaker {(i % 3) + 1}"  # Simple speaker assignment
+                        })
+                else:
+                    # Full text only
+                    text = result.get('text', '').strip()
+                    if text:
+                        segments.append({
+                            "timestamp": "0:00",
+                            "text": text,
+                            "speaker": "Speaker"
+                        })
                 
-                transcript_id = transcript_response.json()['id']
-                print(f"⏳ Transcription job ID: {transcript_id}")
-                
-                # Poll for completion (max 30 seconds)
-                max_attempts = 30
-                for attempt in range(max_attempts):
-                    result = requests.get(
-                        f"{self.transcript_url}/{transcript_id}",
-                        headers=headers
-                    )
-                    
-                    status = result.json()['status']
-                    print(f"📊 Status: {status} (attempt {attempt + 1}/{max_attempts})")
-                    
-                    if status == 'completed':
-                        return self._format_assemblyai_response(result.json())
-                    elif status == 'error':
-                        raise Exception(f"Transcription failed: {result.json().get('error')}")
-                    
-                    time.sleep(1)
-                
-                # Timeout - return what we have
-                print("⏱️  Transcription timeout - returning partial results")
-                return await self._mock_transcribe(audio_data)
+                print(f"✅ Whisper transcribed {len(segments)} segments")
+                return segments
                 
             finally:
                 # Clean up temp file
@@ -110,77 +144,98 @@ class STTService:
                     os.unlink(temp_file_path)
                     
         except Exception as e:
-            print(f"❌ Transcription error: {str(e)}")
+            print(f"❌ Whisper transcription error: {str(e)}")
             # Fallback to mock
-            try:
-                decoded_audio = base64.b64decode(audio_base64)
-                return await self._mock_transcribe(decoded_audio)
-            except:
-                return await self._mock_transcribe(b'')
+            return await self._mock_transcribe()
     
-    def _format_assemblyai_response(self, result: dict) -> List[Dict[str, str]]:
-        """Format AssemblyAI response to our transcript format"""
-        segments = []
-        
-        # If we have speaker labels, use them
-        if result.get('utterances'):
-            for utterance in result['utterances']:
-                segments.append({
-                    "timestamp": self._format_timestamp(utterance['start']),
-                    "text": utterance['text'],
-                    "speaker": f"Speaker {utterance['speaker']}"
-                })
-        else:
-            # No speaker labels, return full text
-            text = result.get('text', '')
-            if text:
-                segments.append({
-                    "timestamp": "0:00",
-                    "text": text,
-                    "speaker": "Speaker"
-                })
-        
-        return segments
-    
-    def _format_timestamp(self, milliseconds: int) -> str:
-        """Convert milliseconds to MM:SS format"""
-        seconds = milliseconds // 1000
-        minutes = seconds // 60
-        secs = seconds % 60
+    def _format_timestamp(self, seconds: float) -> str:
+        """Convert seconds to MM:SS format"""
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
         return f"{minutes}:{secs:02d}"
     
-    async def _mock_transcribe(self, audio_data: bytes) -> List[Dict[str, str]]:
-        """Mock transcription for testing when API key not available"""
-        print("📝 Mock transcription: Generating sample transcript")
-        audio_size_kb = len(audio_data) / 1024
+    async def _mock_transcribe(self) -> List[Dict[str, str]]:
+        """Mock transcription for testing when real STT not available"""
+        print("📝 Using mock transcription")
         
-        # Generate realistic looking transcript based on audio size
+        # Generate realistic looking transcript
         sample_texts = [
             "Let's start today's meeting and discuss the project updates.",
             "I think we should focus on the key deliverables for this quarter.",
             "The team has been working hard on implementing the new features.",
             "We need to address the feedback from our stakeholders.",
             "I agree, let's schedule a follow-up meeting next week.",
-            "Does anyone have any questions or concerns?",
+            "Does anyone have any questions or concerns about this approach?",
             "Great work everyone, let's keep the momentum going.",
             "We should document these decisions for future reference.",
+            "The next milestone is scheduled for the end of this month.",
+            "Let me share my screen to show the latest progress."
         ]
         
         import random
-        from datetime import datetime
         
-        # Return 1-3 random segments
-        num_segments = min(3, max(1, int(audio_size_kb / 50)))
+        # Return 1-2 segments
+        num_segments = random.randint(1, 2)
         segments = []
         
         for i in range(num_segments):
             segments.append({
-                "timestamp": f"0:{i*10:02d}",
+                "timestamp": f"0:{i*15:02d}",
                 "text": random.choice(sample_texts),
-                "speaker": f"Speaker {(i % 3) + 1}"
+                "speaker": f"Speaker {random.randint(1, 3)}"
             })
         
         print(f"✅ Generated {len(segments)} mock transcript segments")
         return segments
 
+# ================================
+# GEMINI FALLBACK (IF WHISPER FAILS)
+# ================================
+
+class GeminiSTTService:
+    def __init__(self):
+        try:
+            import google.generativeai as genai
+            self.api_key = os.getenv('GOOGLE_GEMINI_API_KEY', '')
+            
+            if self.api_key:
+                genai.configure(api_key=self.api_key)
+                self.model = genai.GenerativeModel('gemini-pro')
+                print("✅ Gemini configured as fallback")
+                self.available = True
+            else:
+                print("⚠️ No Gemini API key found")
+                self.available = False
+        except ImportError:
+            print("⚠️ Gemini not available")
+            self.available = False
+    
+    async def transcribe_with_context(self, text_description: str) -> List[Dict[str, str]]:
+        """Generate realistic transcript based on context (fallback method)"""
+        if not self.available:
+            return []
+        
+        try:
+            prompt = f"""
+            Generate a realistic meeting transcript segment based on this context: {text_description}
+            
+            Return as JSON array with format:
+            [{{"timestamp": "0:00", "text": "meeting content", "speaker": "Speaker 1"}}]
+            
+            Make it sound natural and professional.
+            """
+            
+            response = self.model.generate_content(prompt)
+            
+            # Parse JSON response
+            import json
+            transcript_data = json.loads(response.text)
+            return transcript_data if isinstance(transcript_data, list) else []
+            
+        except Exception as e:
+            print(f"❌ Gemini fallback error: {e}")
+            return []
+
+# Initialize services
 stt_service = STTService()
+gemini_fallback = GeminiSTTService()

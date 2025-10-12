@@ -4,8 +4,8 @@
  */
 
 // Constants
-const API_BASE_URL = 'http://127.0.0.1:8000';  // Local development
-// For production, change to: 'https://meetnote-backend.onrender.com'
+const API_BASE_URL = 'https://meetnote-backend.onrender.com';  // Production
+// For local development, change to: 'http://127.0.0.1:8000'
 const CHUNK_DURATION = 5000; // 5 seconds
 
 // State

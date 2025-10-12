@@ -1,0 +1,70 @@
+# MeetNote Project .gitignore
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production.local
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+ENV/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+meetnote.db
+
+# Audio files
+uploads/
+recordings/
+*.wav
+*.webm
+*.mp3
+*.m4a
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+.pytest_cache/
+coverage/
+
+# Temporary
+temp/
+tmp/
+*.tmp
+
+# Chrome extension (for web store)
+chrome-extension.zip
+*.crx
+*.pem
+
+# System
+.DS_Store
+Thumbs.db

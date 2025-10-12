@@ -1,9 +1,9 @@
 # Netlify Configuration for MeetNote Frontend
+# Note: Set "Base directory" to "frontend" in Netlify dashboard
 
 [build]
   command = "npm install && npm run build"
   publish = "out"
-  base = "frontend"
 
 [[redirects]]
   from = "/*"

@@ -47,6 +47,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   showRegisterBtn.addEventListener('click', showRegister);
   showLoginBtn.addEventListener('click', showLogin);
   
+  // View meetings button
+  const viewMeetingsBtn = document.getElementById('view-meetings-btn');
+  if (viewMeetingsBtn) {
+    viewMeetingsBtn.addEventListener('click', () => {
+      chrome.tabs.create({ url: 'https://meetnoteapp.netlify.app/meetings' });
+    });
+  }
+  
   // Check authentication
   const { token: storedToken } = await chrome.storage.local.get('token');
   

@@ -1,16 +1,14 @@
-import { Metadata } from 'next'
+"use client"
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Play, Download, Share2, Calendar, Clock, Users } from 'lucide-react'
+import { Play, Download, Share2, Calendar, Clock, Users, Loader2 } from 'lucide-react'
+import { api } from '@/lib/api'
 
-export const metadata: Metadata = {
-  title: 'Meetings | MeetNote',
-  description: 'View and manage your recorded meetings',
-}
-
-// Mock meeting data - replace with real API calls
-const meetings = [
+// Mock meeting data - FOR DEMO ONLY (will be replaced with real API data)
+const mockMeetings = [
   {
     id: 1,
     title: 'Team Standup - Sprint 15',
@@ -73,9 +71,81 @@ function getPlatformColor(platform: string) {
 }
 
 export default function MeetingsPage() {
+  const [meetings, setMeetings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    loadMeetings()
+  }, [])
+
+  async function loadMeetings() {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Check if user has token
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setIsAuthenticated(false)
+        setMeetings(mockMeetings) // Show mock data if not authenticated
+        setLoading(false)
+        return
+      }
+      
+      setIsAuthenticated(true)
+      
+      // Fetch real meetings from backend
+      const response = await api.getMeetings(token)
+      
+      if (response.meetings && response.meetings.length > 0) {
+        setMeetings(response.meetings)
+      } else {
+        // No meetings yet, show mock data for demo
+        setMeetings(mockMeetings)
+      }
+    } catch (err: any) {
+      console.error('Failed to load meetings:', err)
+      setError(err.message || 'Failed to load meetings')
+      // Show mock data on error
+      setMeetings(mockMeetings)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading your meetings...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
       <div className="container mx-auto px-4 py-12">
+        {/* Auth Warning */}
+        {!isAuthenticated && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800 text-center">
+              <strong>Demo Mode:</strong> Log in through the Chrome extension to see your real meetings.
+            </p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800 text-center">
+              {error} - Showing demo data instead.
+            </p>
+          </div>
+        )}
+        
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">

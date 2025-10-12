@@ -36,7 +36,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting MeetNote Backend...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     
-    # Create database tables
+    # Drop and recreate database tables (fixes schema conflicts on Render)
+    try:
+        Base.metadata.drop_all(bind=engine)
+        logger.info("Dropped existing tables")
+    except Exception as e:
+        logger.warning(f"Could not drop tables: {e}")
+    
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables created")
     

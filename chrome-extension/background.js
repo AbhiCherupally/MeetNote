@@ -53,8 +53,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   switch (message.type) {
     case 'START_RECORDING':
-      startRecording(sender.tab.id);
-      sendResponse({ success: true });
+      // Get current tab if sender doesn't have tab info
+      if (sender.tab && sender.tab.id) {
+        startRecording(sender.tab.id);
+        sendResponse({ success: true });
+      } else {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) {
+            startRecording(tabs[0].id);
+            sendResponse({ success: true });
+          }
+        });
+        return true; // Keep channel open for async response
+      }
       break;
       
     case 'STOP_RECORDING':
@@ -72,7 +83,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
       
     case 'MEETING_DETECTED':
-      handleMeetingDetected(message.data, sender.tab.id);
+      if (sender.tab && sender.tab.id) {
+        handleMeetingDetected(message.data, sender.tab.id);
+      }
       break;
       
     case 'AUDIO_CHUNK':
@@ -140,12 +153,14 @@ async function startRecording(tabId) {
     recordingState.isRecording = false;
     
     // Show error notification
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Recording Failed',
-      message: error.message
-    });
+    if (chrome.notifications && chrome.notifications.create) {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: 'Recording Failed',
+        message: error.message
+      });
+    }
   }
 }
 
@@ -179,12 +194,14 @@ async function stopRecording() {
     chrome.action.setBadgeText({ text: '' });
     
     // Show completion notification
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Recording Complete',
-      message: 'Your meeting has been processed and is ready to view.'
-    });
+    if (chrome.notifications && chrome.notifications.create) {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: 'Recording Complete',
+        message: 'Your meeting has been processed and is ready to view.'
+      });
+    }
     
     // Reset state
     recordingState = {
@@ -359,12 +376,14 @@ async function createHighlight() {
     );
     
     if (response.ok) {
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon48.png',
-        title: 'Highlight Created',
-        message: 'Your highlight has been saved!'
-      });
+      if (chrome.notifications && chrome.notifications.create) {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon48.png',
+          title: 'Highlight Created',
+          message: 'Your highlight has been saved!'
+        });
+      }
     }
     
   } catch (error) {
@@ -387,13 +406,15 @@ function toggleTranscript() {
 function handleMeetingDetected(data, tabId) {
   console.log('Meeting detected:', data);
   
-  // Show notification
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon48.png',
-    title: 'Meeting Detected',
-    message: `${data.platform} meeting detected. Click the extension to start recording.`
-  });
+  // Show notification (check if API exists)
+  if (chrome.notifications && chrome.notifications.create) {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Meeting Detected',
+      message: `${data.platform} meeting detected. Click the extension to start recording.`
+    });
+  }
 }
 
 // Handle audio chunk from content script

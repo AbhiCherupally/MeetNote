@@ -50,8 +50,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // View meetings button
   const viewMeetingsBtn = document.getElementById('view-meetings-btn');
   if (viewMeetingsBtn) {
-    viewMeetingsBtn.addEventListener('click', () => {
-      chrome.tabs.create({ url: 'https://meetnoteapp.netlify.app/meetings' });
+    viewMeetingsBtn.addEventListener('click', async () => {
+      // Get stored token and pass it to frontend
+      const { token } = await chrome.storage.local.get('token');
+      const url = token 
+        ? `https://meetnoteapp.netlify.app/meetings?token=${encodeURIComponent(token)}`
+        : 'https://meetnoteapp.netlify.app/meetings';
+      chrome.tabs.create({ url });
     });
   }
   
@@ -197,18 +202,19 @@ async function logout() {
 
 // Toggle recording
 async function toggleRecording() {
-  if (isRecording) {
-    // Stop recording
-    chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
-    isRecording = false;
-  } else {
-    // Start recording
-    chrome.runtime.sendMessage({ type: 'START_RECORDING' });
-    isRecording = true;
-  }
-  
+  console.log('Toggle recording clicked, current state:', isRecording);
+  isRecording = !isRecording;
   updateRecordingUI();
-}
+  
+  // Send message to background script
+  const message = {
+    type: isRecording ? 'START_RECORDING' : 'STOP_RECORDING'
+  };
+  console.log('Sending message to background:', message);
+  
+  chrome.runtime.sendMessage(message, (response) => {
+    console.log('Background response:', response);
+  });
 
 // Update recording UI
 function updateRecordingUI() {

@@ -85,8 +85,18 @@ export default function MeetingsPage() {
       setLoading(true)
       setError(null)
       
-      // Check if user has token
-      const token = localStorage.getItem('token')
+      // Check for token from URL (passed by extension) or localStorage
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlToken = urlParams.get('token')
+      let token = urlToken || localStorage.getItem('token')
+      
+      // If token came from URL, store it locally
+      if (urlToken) {
+        localStorage.setItem('token', urlToken)
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+      
       if (!token) {
         setIsAuthenticated(false)
         setMeetings(mockMeetings) // Show mock data if not authenticated
@@ -115,6 +125,26 @@ export default function MeetingsPage() {
     }
   }
 
+  async function handleQuickLogin() {
+    const email = (document.getElementById('email-input') as HTMLInputElement)?.value
+    const password = (document.getElementById('password-input') as HTMLInputElement)?.value
+    
+    if (!email || !password) {
+      alert('Please enter email and password')
+      return
+    }
+    
+    try {
+      const response = await api.login(email, password)
+      if (response.token) {
+        localStorage.setItem('token', response.token)
+        loadMeetings() // Reload with authentication
+      }
+    } catch (error) {
+      alert('Login failed: ' + (error as Error).message)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center">
@@ -132,9 +162,28 @@ export default function MeetingsPage() {
         {/* Auth Warning */}
         {!isAuthenticated && (
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800 text-center">
-              <strong>Demo Mode:</strong> Log in through the Chrome extension to see your real meetings.
+            <p className="text-yellow-800 text-center mb-4">
+              <strong>Demo Mode:</strong> Log in to see your real meetings.
             </p>
+            <div className="flex justify-center">
+              <div className="flex gap-2 max-w-md w-full">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  className="flex-1 px-3 py-2 border border-yellow-300 rounded text-sm"
+                  id="email-input"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  className="flex-1 px-3 py-2 border border-yellow-300 rounded text-sm"
+                  id="password-input"
+                />
+                <Button onClick={handleQuickLogin} size="sm" className="bg-yellow-600 hover:bg-yellow-700">
+                  Login
+                </Button>
+              </div>
+            </div>
           </div>
         )}
         

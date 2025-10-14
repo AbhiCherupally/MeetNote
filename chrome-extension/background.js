@@ -50,6 +50,7 @@ chrome.commands.onCommand.addListener((command) => {
 // Message handler from content script and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background received message:', message);
+  console.log('Sender:', sender);
   
   switch (message.type) {
     case 'START_RECORDING':
@@ -107,30 +108,40 @@ async function startRecording(tabId) {
     
     // Get auth token
     const { token } = await chrome.storage.local.get('token');
+    console.log('Auth token found:', !!token);
     
     if (!token) {
       throw new Error('Not authenticated');
     }
     
     // Create meeting via API
+    console.log('Creating meeting via API...');
+    const meetingData = {
+      title: 'Meeting Recording',
+      platform: 'detected', 
+      meeting_url: await getCurrentTabUrl()
+    };
+    console.log('Meeting data:', meetingData);
+    
     const response = await fetch(`${API_BASE_URL}/api/meetings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        title: 'Meeting Recording',
-        platform: 'detected',
-        meeting_url: await getCurrentTabUrl()
-      })
+      body: JSON.stringify(meetingData)
     });
     
+    console.log('API response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error('Failed to create meeting');
+      const errorText = await response.text();
+      console.error('API error:', errorText);
+      throw new Error(`Failed to create meeting: ${response.status}`);
     }
     
     const meeting = await response.json();
+    console.log('Meeting created:', meeting);
     recordingState.meetingId = meeting.id;
     
     // Start capturing audio from tab

@@ -74,7 +74,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     db.refresh(new_user)
     
     # Create access token
-    access_token = create_access_token(data={"sub": new_user.id})
+    access_token = create_access_token(data={"sub": str(new_user.id)})
     
     return {
         "access_token": access_token,
@@ -98,7 +98,7 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
         )
     
     # Create access token
-    access_token = create_access_token(data={"sub": user.id})
+    access_token = create_access_token(data={"sub": str(user.id)})
     
     return {
         "access_token": access_token,
@@ -121,5 +121,55 @@ async def auth_status(current_user: models.User = Depends(get_current_user)):
             "id": current_user.id,
             "email": current_user.email,
             "name": current_user.name
+        }
+    }
+
+
+@router.post("/create-test-user")
+async def create_test_user(db: Session = Depends(get_db)):
+    """Create a test user for debugging (remove in production)"""
+    
+    # Check if test user already exists
+    existing_user = db.query(models.User).filter(
+        models.User.email == "test@meetnote.app"
+    ).first()
+    
+    if existing_user:
+        # Create access token for existing user
+        access_token = create_access_token(data={"sub": str(existing_user.id)})
+        return {
+            "message": "Test user already exists",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": existing_user.id,
+                "email": existing_user.email,
+                "name": existing_user.name
+            }
+        }
+    
+    # Create new test user
+    hashed_password = get_password_hash("testpassword123")
+    new_user = models.User(
+        email="test@meetnote.app",
+        name="Test User",
+        hashed_password=hashed_password
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    # Create access token
+    access_token = create_access_token(data={"sub": str(new_user.id)})
+    
+    return {
+        "message": "Test user created",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": new_user.id,
+            "email": new_user.email,
+            "name": new_user.name
         }
     }

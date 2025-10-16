@@ -70,7 +70,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3001", 
         "https://meetnoteapp.netlify.app",
+        "https://meetnote-app.netlify.app",
         "chrome-extension://*",
     ],
     allow_credentials=True,

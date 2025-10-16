@@ -24,6 +24,23 @@ whisper_service = WhisperService()
 ai_service = AIService()
 
 
+# Test endpoint without authentication for debugging
+@router.get("/test")
+async def test_endpoint():
+    """Test endpoint to verify meetings router is working"""
+    return {"message": "Meetings API is working", "authenticated": False}
+
+
+@router.get("/test-auth")
+async def test_auth_endpoint(current_user: models.User = Depends(get_current_user)):
+    """Test endpoint to verify authentication is working"""
+    return {
+        "message": "Authentication is working", 
+        "user_id": current_user.id,
+        "user_email": current_user.email
+    }
+
+
 # Pydantic schemas
 class MeetingCreate(BaseModel):
     title: str
@@ -108,6 +125,26 @@ async def get_meetings(
     ).order_by(models.Meeting.started_at.desc()).offset(skip).limit(limit).all()
     
     return meetings
+
+
+@router.get("/public")
+async def get_public_meetings(db: Session = Depends(get_db)):
+    """Get all meetings without authentication (for testing)"""
+    
+    meetings = db.query(models.Meeting).order_by(
+        models.Meeting.started_at.desc()
+    ).limit(10).all()
+    
+    return [
+        {
+            "id": meeting.id,
+            "title": meeting.title,
+            "status": meeting.status,
+            "started_at": meeting.started_at,
+            "user_id": meeting.user_id
+        }
+        for meeting in meetings
+    ]
 
 
 @router.get("/{meeting_id}", response_model=MeetingResponse)

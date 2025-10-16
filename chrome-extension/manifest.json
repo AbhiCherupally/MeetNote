@@ -15,7 +15,8 @@
     "https://meet.google.com/*",
     "https://*.zoom.us/*",
     "https://teams.microsoft.com/*",
-    "https://meetnote-backend.onrender.com/*"
+    "https://meetnote-backend.onrender.com/*",
+    "http://localhost:8000/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -26,7 +27,10 @@
       "matches": [
         "https://meet.google.com/*",
         "https://*.zoom.us/*",
-        "https://teams.microsoft.com/*"
+        "https://teams.microsoft.com/*",
+        "file://*/*test-meeting*",
+        "http://localhost:*/*",
+        "https://localhost:*/*"
       ],
       "js": ["content.js"],
       "run_at": "document_end"
@@ -68,7 +72,7 @@
   "web_accessible_resources": [
     {
       "resources": ["overlay.html", "overlay.css"],
-      "matches": ["https://meet.google.com/*", "https://*.zoom.us/*", "https://teams.microsoft.com/*"]
+      "matches": ["https://meet.google.com/*", "https://*.zoom.us/*", "https://teams.microsoft.com/*", "file://*/*", "http://localhost:*/*", "https://localhost:*/*"]
     }
   ]
 }

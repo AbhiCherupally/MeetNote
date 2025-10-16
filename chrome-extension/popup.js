@@ -2,8 +2,27 @@
  * Popup Script - Extension popup UI logic
  */
 
-const API_BASE_URL = 'https://meetnote-backend.onrender.com';  // Production
-// For local development, change to: 'http://127.0.0.1:8000'
+// Auto-detect environment
+let API_BASE_URL = 'https://meetnote-backend.onrender.com';  // Production default
+
+// For local development, check if local server is available
+async function detectEnvironment() {
+  try {
+    const response = await fetch('http://localhost:8000/api/health', { 
+      method: 'GET',
+      signal: AbortSignal.timeout(1000)
+    });
+    if (response.ok) {
+      API_BASE_URL = 'http://localhost:8000';
+      console.log('Using local development server');
+    }
+  } catch (error) {
+    console.log('Using production server');
+  }
+}
+
+// Initialize environment detection on popup load
+detectEnvironment();
 
 // DOM Elements
 let loginSection, registerSection, authenticatedView, unauthenticatedView;
@@ -215,6 +234,7 @@ async function toggleRecording() {
   chrome.runtime.sendMessage(message, (response) => {
     console.log('Background response:', response);
   });
+}
 
 // Update recording UI
 function updateRecordingUI() {

@@ -35,3 +35,7 @@ email-validator==2.1.1
 
 # Utilities
 python-dateutil==2.9.0
+
+# Production dependencies
+gunicorn==22.0.0
+requests==2.32.3

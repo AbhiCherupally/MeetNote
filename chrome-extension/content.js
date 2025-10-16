@@ -28,6 +28,14 @@ const MEETING_PLATFORMS = {
       video: 'video',
       participantCount: '[data-tid="roster-list"]'
     }
+  },
+  TEST_MEETING: {
+    name: 'Test Meeting',
+    urlPattern: /test-meeting|localhost.*meet/,
+    selectors: {
+      video: 'video',
+      participantCount: '#participants'
+    }
   }
 };
 
@@ -379,11 +387,46 @@ function handleMessage(message, sender, sendResponse) {
   return true;
 }
 
+// Test meeting detection (for debugging)
+function testMeetingDetection() {
+  console.log('🔍 MeetNote Debug Test:');
+  console.log('Current URL:', window.location.href);
+  console.log('Detected Platform:', currentPlatform ? currentPlatform.name : 'None');
+  
+  // Check for video elements
+  const videos = document.querySelectorAll('video');
+  console.log(`Found ${videos.length} video element(s)`);
+  
+  // Check if overlay was injected
+  console.log('Overlay injected:', overlayInjected);
+  
+  // Test overlay visibility
+  const overlay = document.getElementById('meetnote-overlay');
+  console.log('Overlay element exists:', !!overlay);
+  
+  return {
+    url: window.location.href,
+    platform: currentPlatform,
+    videoCount: videos.length,
+    overlayExists: !!overlay,
+    overlayInjected
+  };
+}
+
+// Make test function globally available
+window.meetNoteTest = testMeetingDetection;
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
 }
+
+// Run debug test after initialization
+setTimeout(() => {
+  const testResult = testMeetingDetection();
+  console.log('MeetNote Test Result:', testResult);
+}, 3000);
 
 console.log('MeetNote content script initialized');

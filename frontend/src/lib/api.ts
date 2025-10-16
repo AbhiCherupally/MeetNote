@@ -60,7 +60,7 @@ export const api = {
   
   // Meeting endpoints - matches Python backend
   async createMeeting(meetingData: any, token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/meetings`, {
+    const response = await fetch(`${API_BASE_URL}/api/meetings/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -72,16 +72,21 @@ export const api = {
   },
   
   async getMeetings(token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/meetings`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/meetings/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch meetings:', error);
+      throw error;
+    }
   },
   
   async getMeeting(meetingId: string, token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/meetings/${meetingId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/meetings/${meetingId}/`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -90,7 +95,7 @@ export const api = {
   },
 
   async stopMeeting(meetingId: string, token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/meetings/${meetingId}/stop`, {
+    const response = await fetch(`${API_BASE_URL}/api/meetings/${meetingId}/stop/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -100,7 +105,7 @@ export const api = {
   },
 
   async createHighlight(meetingId: string, highlightData: any, token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/meetings/${meetingId}/highlights`, {
+    const response = await fetch(`${API_BASE_URL}/api/meetings/${meetingId}/highlights/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

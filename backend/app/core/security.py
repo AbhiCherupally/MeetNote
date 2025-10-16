@@ -45,10 +45,18 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def decode_token(token: str) -> dict:
     """Decode and verify a JWT token"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
+        logger.info(f"Decoding token with SECRET_KEY: {settings.SECRET_KEY[:10]}...")
+        logger.info(f"Using algorithm: {settings.ALGORITHM}")
+        
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        logger.info(f"Successfully decoded payload: {payload}")
         return payload
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWT decode error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -61,21 +69,40 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ):
     """Get current authenticated user from token"""
-    token = credentials.credentials
-    payload = decode_token(token)
+    import logging
+    logger = logging.getLogger(__name__)
     
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    try:
+        token = credentials.credentials
+        logger.info(f"Received token: {token[:20]}...")
+        
+        payload = decode_token(token)
+        logger.info(f"Decoded payload: {payload}")
+        
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            logger.error("No user ID in token payload")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+            )
+        
+        user_id: int = int(user_id_str)
+        
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user is None:
+            logger.error(f"User {user_id} not found in database")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+            )
+        
+        logger.info(f"Successfully authenticated user {user.id}")
+        return user
+        
+    except Exception as e:
+        logger.error(f"Authentication error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
-    
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
-    
-    return user

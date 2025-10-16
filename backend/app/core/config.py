@@ -5,7 +5,11 @@ Configuration settings for MeetNote Backend
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     """Application settings"""
@@ -50,7 +54,9 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list = [
         "http://localhost:3000",
+        "http://localhost:3001", 
         "https://meetnoteapp.netlify.app",
+        "https://meetnote-app.netlify.app",  # Alternative domain
     ]
     
     # File Storage
@@ -63,6 +69,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Log the SECRET_KEY value
+logger.info(f"SECRET_KEY loaded: {settings.SECRET_KEY}")
 
 # Create necessary directories
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

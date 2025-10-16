@@ -4,8 +4,27 @@
  */
 
 // Constants
-const API_BASE_URL = 'https://meetnote-backend.onrender.com';  // Production
-// For local development, change to: 'http://127.0.0.1:8000'
+// Auto-detect environment based on available endpoints
+let API_BASE_URL = 'https://meetnote-backend.onrender.com';  // Production default
+
+// For local development, check if local server is available
+async function detectEnvironment() {
+  try {
+    const response = await fetch('http://localhost:8000/api/health', { 
+      method: 'GET',
+      signal: AbortSignal.timeout(1000) // 1 second timeout
+    });
+    if (response.ok) {
+      API_BASE_URL = 'http://localhost:8000';
+      console.log('Using local development server');
+    }
+  } catch (error) {
+    console.log('Using production server');
+  }
+}
+
+// Initialize environment detection
+detectEnvironment();
 const CHUNK_DURATION = 5000; // 5 seconds
 
 // State
@@ -123,7 +142,7 @@ async function startRecording(tabId) {
     };
     console.log('Meeting data:', meetingData);
     
-    const response = await fetch(`${API_BASE_URL}/api/meetings`, {
+    const response = await fetch(`${API_BASE_URL}/api/meetings/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -325,7 +344,7 @@ async function uploadAudioToBackend() {
     
     // Upload to backend
     const response = await fetch(
-      `${API_BASE_URL}/api/meetings/${recordingState.meetingId}/upload-audio`,
+      `${API_BASE_URL}/api/meetings/${recordingState.meetingId}/upload-audio/`,
       {
         method: 'POST',
         headers: {
@@ -371,7 +390,7 @@ async function createHighlight() {
     const endTime = currentTime;
     
     const response = await fetch(
-      `${API_BASE_URL}/api/meetings/${recordingState.meetingId}/highlights`,
+      `${API_BASE_URL}/api/meetings/${recordingState.meetingId}/highlights/`,
       {
         method: 'POST',
         headers: {

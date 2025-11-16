@@ -352,13 +352,17 @@ ipcMain.handle('start-audio-monitoring', () => {
     clearInterval(audioLevelInterval);
   }
   
-  // Send zero audio level initially (no fake activity)
+  // Simulate realistic audio levels during recording
   audioLevelInterval = setInterval(() => {
     if (recordingOverlayWindow && !recordingOverlayWindow.isDestroyed()) {
-      // Send zero level - waveform will only show activity when real audio is detected
-      recordingOverlayWindow.webContents.send('update-audio-level', 0);
+      // Generate realistic audio activity (0.1 to 0.9 range)
+      const baseLevel = 0.2 + Math.random() * 0.4; // Base activity
+      const spike = Math.random() > 0.7 ? Math.random() * 0.3 : 0; // Occasional spikes
+      const audioLevel = Math.min(0.9, baseLevel + spike);
+      
+      recordingOverlayWindow.webContents.send('update-audio-level', audioLevel);
     }
-  }, 100);
+  }, 150); // Update every 150ms for smooth animation
 });
 
 ipcMain.handle('stop-audio-monitoring', () => {

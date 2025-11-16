@@ -82,13 +82,21 @@ async def transcribe_audio(request: AudioRequest, req: Request):
         # Store in Supabase if available
         if hasattr(req.app.state, 'supabase') and req.app.state.supabase:
             try:
+                logger.info(f"🔄 Attempting to store meeting {meeting_id} in Supabase...")
                 response = req.app.state.supabase.table('meetings').insert(meeting).execute()
+                logger.info(f"📊 Supabase response: {response}")
+                
                 if response.data:
-                    logger.info(f"✅ Meeting {meeting_id} stored in Supabase")
+                    logger.info(f"✅ Meeting {meeting_id} stored in Supabase successfully")
                 else:
-                    logger.error(f"❌ Failed to store meeting {meeting_id} in Supabase")
+                    logger.error(f"❌ Failed to store meeting {meeting_id} - no data returned")
+                    logger.error(f"❌ Response details: {response}")
             except Exception as db_error:
-                logger.error(f"Database error: {db_error}")
+                logger.error(f"💥 Database error storing meeting {meeting_id}: {db_error}")
+                logger.error(f"💥 Meeting data: {meeting}")
+                # Don't raise the error, just log it so the API still returns success
+        else:
+            logger.warning(f"⚠️ No Supabase client available for meeting {meeting_id}")
         
         logger.info(f"Audio transcription completed successfully for {meeting_id}")
         return meeting

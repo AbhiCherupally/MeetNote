@@ -9,6 +9,14 @@ import logging
 import uuid
 from datetime import datetime
 
+# Try to import lightweight Whisper, fall back to mock if not available
+try:
+    from app.services.lightweight_whisper import lightweight_whisper
+    WHISPER_AVAILABLE = True
+except ImportError:
+    WHISPER_AVAILABLE = False
+    lightweight_whisper = None
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -34,19 +42,29 @@ async def transcribe_audio(request: AudioRequest, req: Request):
         audio_size = len(request.audio_data)
         estimated_duration = max(5, min(300, audio_size // 1000))
         
-        # Generate realistic mock transcript based on duration
-        if estimated_duration < 30:
-            transcript = "Hello, this is a brief test recording for the MeetNote application."
-            summary = f"Mock transcription for {estimated_duration}s audio recording"
-            confidence = 0.75
-        elif estimated_duration < 120:
-            transcript = "This is a meeting recording. We discussed the project progress, reviewed the current status, and planned next steps for the upcoming sprint."
-            summary = f"Meeting discussion covering project status and planning for {estimated_duration}s"
-            confidence = 0.85
+        # Try to use lightweight Whisper if available, otherwise use mock
+        if WHISPER_AVAILABLE and lightweight_whisper:
+            try:
+                # Initialize Whisper if not already done
+                if not lightweight_whisper.is_ready():
+                    await lightweight_whisper.initialize()
+                
+                # Use real Whisper transcription
+                whisper_result = await lightweight_whisper.transcribe_audio(request.audio_data)
+                transcript = whisper_result["transcript"]
+                confidence = whisper_result["confidence"]
+                estimated_duration = whisper_result["duration"]
+                summary = f"Whisper AI transcription for {estimated_duration}s recording"
+                
+                logger.info(f"✅ Used Whisper for transcription: {len(transcript)} chars")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Whisper failed, using mock: {e}")
+                # Fall back to mock transcription
+                transcript, summary, confidence = _generate_mock_transcript(estimated_duration)
         else:
-            transcript = "This is a comprehensive meeting recording. We covered multiple topics including project updates, technical discussions, resource allocation, and strategic planning. The team reviewed current progress and identified key action items for the next phase."
-            summary = f"Comprehensive meeting covering multiple topics over {estimated_duration}s"
-            confidence = 0.90
+            # Use mock transcription
+            transcript, summary, confidence = _generate_mock_transcript(estimated_duration)
         
         # Create meeting object
         meeting = {
@@ -78,3 +96,21 @@ async def transcribe_audio(request: AudioRequest, req: Request):
     except Exception as e:
         logger.error(f"Audio transcription error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _generate_mock_transcript(estimated_duration: int) -> tuple[str, str, float]:
+    """Generate mock transcript based on duration"""
+    if estimated_duration < 30:
+        transcript = "Hello, this is a brief test recording for the MeetNote application."
+        summary = f"Mock transcription for {estimated_duration}s audio recording"
+        confidence = 0.75
+    elif estimated_duration < 120:
+        transcript = "This is a meeting recording. We discussed the project progress, reviewed the current status, and planned next steps for the upcoming sprint."
+        summary = f"Meeting discussion covering project status and planning for {estimated_duration}s"
+        confidence = 0.85
+    else:
+        transcript = "This is a comprehensive meeting recording. We covered multiple topics including project updates, technical discussions, resource allocation, and strategic planning. The team reviewed current progress and identified key action items for the next phase."
+        summary = f"Comprehensive meeting covering multiple topics over {estimated_duration}s"
+        confidence = 0.90
+    
+    return transcript, summary, confidence

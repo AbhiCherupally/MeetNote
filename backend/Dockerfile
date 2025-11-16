@@ -1,26 +1,32 @@
-# Use Python 3.11 slim image for faster builds
-FROM python:3.11-slim
+# Use Python 3.11 alpine for minimal memory footprint (~50MB base)
+FROM python:3.11-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (minimal for faster builds)
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Install minimal system dependencies
+RUN apk add --no-cache gcc musl-dev
 
 # Copy requirements first for better Docker layer caching
 COPY requirements.txt .
 
-# Install Python dependencies with caching
+# Install Python dependencies with minimal cache
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip cache purge
+
+# Remove build dependencies to save space
+RUN apk del gcc musl-dev
 
 # Copy application code
 COPY . .
 
+# Create non-root user for security and memory efficiency
+RUN adduser -D -s /bin/sh appuser
+USER appuser
+
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run with memory-optimized settings for 512MB limit
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--loop", "asyncio"]

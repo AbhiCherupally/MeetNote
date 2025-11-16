@@ -13,8 +13,6 @@ import os
 
 from app.core.config import settings
 from app.api import transcription
-from app.services.whisper_service import WhisperService
-from app.core.websocket_manager import ConnectionManager
 from supabase import create_client, Client
 
 # Configure logging
@@ -24,9 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize services
-whisper_service = WhisperService()
-ws_manager = ConnectionManager()
+# Initialize services (removed heavy dependencies for lightweight deployment)
 
 
 @asynccontextmanager
@@ -51,19 +47,13 @@ async def lifespan(app: FastAPI):
         logger.warning(f"⚠️ Supabase initialization failed: {e}")
         app.state.supabase = None
     
-    # Initialize Whisper model
-    try:
-        await whisper_service.initialize()
-        logger.info("✅ Whisper model loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Whisper initialization failed: {e}")
-        logger.info("📝 Running without Whisper (will use mock transcription)")
+    # Note: Using mock transcription for lightweight deployment
+    logger.info("✅ Backend ready with mock transcription")
     
     yield
     
     # Shutdown
     logger.info("Shutting down MeetNote Backend...")
-    whisper_service.cleanup()
 
 
 # Create FastAPI app
@@ -111,7 +101,7 @@ async def health_check():
         "timestamp": "2025-11-16T18:48:39.281446",
         "version": "2.0.0",
         "database": f"supabase ({database_status})",
-        "whisper": "available" if whisper_service.is_ready() else "unavailable"
+        "whisper": "mock_available"
     }
 
 

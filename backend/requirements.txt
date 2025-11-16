@@ -1,3 +1,4 @@
+# Core FastAPI dependencies (lightweight)
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 supabase==2.24.0
@@ -5,3 +6,11 @@ python-dotenv==1.2.1
 pydantic==2.12.4
 pydantic-settings==2.0.3
 python-multipart==0.0.6
+
+# Optional: Lightweight Whisper for 512MB RAM
+# openai-whisper==20231117  # ~200MB model + ~100MB runtime = ~300MB total
+# torch==2.1.0  # CPU-only version for smaller footprint
+# torchaudio==2.1.0
+
+# For now, using mock transcription to stay under 512MB
+# Uncomment above lines if you want to try real Whisper (may exceed memory limit)

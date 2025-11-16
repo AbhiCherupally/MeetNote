@@ -21,8 +21,11 @@ RUN apk del gcc musl-dev
 # Copy application code
 COPY . .
 
-# Create non-root user for security and memory efficiency
-RUN adduser -D -s /bin/sh appuser
+# Create non-root user and set up directories
+RUN adduser -D -s /bin/sh appuser && \
+    mkdir -p uploads && \
+    chown -R appuser:appuser /app
+
 USER appuser
 
 # Expose port

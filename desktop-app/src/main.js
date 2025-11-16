@@ -283,7 +283,7 @@ ipcMain.handle('show-recording-overlay', async () => {
   });
 
   recordingOverlayWindow = new BrowserWindow({
-    width: 120,
+    width: 160,
     height: 32,
     x: savedPosition.x,
     y: savedPosition.y,
@@ -342,6 +342,30 @@ ipcMain.handle('update-recording-time', async (event, time) => {
     recordingOverlayWindow.webContents.send('update-time', time);
   }
   return true;
+});
+
+// Start audio level monitoring for waveform
+let audioLevelInterval = null;
+
+ipcMain.handle('start-audio-monitoring', () => {
+  if (audioLevelInterval) {
+    clearInterval(audioLevelInterval);
+  }
+  
+  // Send zero audio level initially (no fake activity)
+  audioLevelInterval = setInterval(() => {
+    if (recordingOverlayWindow && !recordingOverlayWindow.isDestroyed()) {
+      // Send zero level - waveform will only show activity when real audio is detected
+      recordingOverlayWindow.webContents.send('update-audio-level', 0);
+    }
+  }, 100);
+});
+
+ipcMain.handle('stop-audio-monitoring', () => {
+  if (audioLevelInterval) {
+    clearInterval(audioLevelInterval);
+    audioLevelInterval = null;
+  }
 });
 
 // Stop recording from overlay

@@ -405,8 +405,9 @@ function stopRecordingTimer() {
 async function showRecordingOverlay() {
     try {
         await ipcRenderer.invoke('show-recording-overlay');
+        await ipcRenderer.invoke('start-audio-monitoring');
         showToast('🔴 Recording started', 'success');
-        console.log('Recording overlay shown');
+        console.log('Recording overlay shown with audio monitoring');
     } catch (error) {
         console.error('Failed to show overlay:', error);
         showToast('🔴 Recording started', 'success');
@@ -415,9 +416,10 @@ async function showRecordingOverlay() {
 
 async function hideRecordingOverlay() {
     try {
+        await ipcRenderer.invoke('stop-audio-monitoring');
         await ipcRenderer.invoke('hide-recording-overlay');
         showToast('⏹️ Recording stopped', 'info');
-        console.log('Recording overlay hidden');
+        console.log('Recording overlay hidden and audio monitoring stopped');
     } catch (error) {
         console.error('Failed to hide overlay:', error);
         showToast('⏹️ Recording stopped', 'info');
@@ -639,64 +641,30 @@ async function processAudioRecording() {
         const audioBlob = new Blob(recordedChunks, { type: 'audio/webm;codecs=opus' });
         console.log('🎵 Audio blob size:', audioBlob.size, 'bytes');
         
-        // Convert to WAV for Whisper processing
-        const audioBuffer = await audioBlob.arrayBuffer();
-        
-        // Send to main process for Whisper transcription
-        const transcriptionResult = await ipcRenderer.invoke('transcribe-audio', {
-            audioBuffer: Array.from(new Uint8Array(audioBuffer)),
-            duration: Math.floor((Date.now() - recordingStartTime) / 1000)
+        // Convert to base64 for backend API
+        const reader = new FileReader();
+        const base64Audio = await new Promise((resolve) => {
+            reader.onloadend = () => {
+                const base64 = reader.result.split(',')[1]; // Remove data:audio/webm;base64, prefix
+                resolve(base64);
+            };
+            reader.readAsDataURL(audioBlob);
         });
         
-        console.log('✅ Whisper transcription result:', transcriptionResult);
+        // Send to backend for REAL Whisper transcription
+        const transcriptionResult = await sendAudioForTranscription(base64Audio);
         
-        const user = checkAuthentication();
-        const meeting = {
-            id: Date.now(),
-            title: `Meeting Recording - ${new Date().toLocaleString()}`,
-            timestamp: Date.now(),
-            duration: transcriptionResult.duration || Math.floor((Date.now() - recordingStartTime) / 1000),
-            summary: transcriptionResult.summary || `Whisper AI transcription completed for ${transcriptionResult.duration}s recording`,
-            transcript: transcriptionResult.transcript || 'Transcription processing failed',
-            organizer: user ? user.name : 'You',
-            participants: 1,
-            confidence: transcriptionResult.confidence || 0.85
-        };
+        console.log('✅ Backend transcription result:', transcriptionResult);
         
-        // Save meeting
-        const meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
-        meetings.unshift(meeting);
-        localStorage.setItem('meetings', JSON.stringify(meetings));
-        console.log('✅ Meeting saved with Whisper transcript:', meeting.title);
-        
-        // Show in UI
-        loadRecordedMeetings();
+        // Backend already stored the meeting in Supabase, just refresh the UI
+        await loadRecordedMeetings();
         switchView('meetings');
-        showToast('✅ Whisper transcription complete!', 'success');
+        showToast('✅ Meeting transcribed and saved!', 'success');
         
     } catch (error) {
-        console.error('Whisper transcription error:', error);
-        
-        // Fallback to basic meeting
-        const user = checkAuthentication();
-        const meeting = {
-            id: Date.now(),
-            title: `Meeting Recording - ${new Date().toLocaleString()}`,
-            timestamp: Date.now(),
-            duration: Math.floor((Date.now() - recordingStartTime) / 1000),
-            summary: 'Audio recorded successfully, transcription failed',
-            transcript: `Audio recording completed (${Math.floor((Date.now() - recordingStartTime) / 1000)} seconds). Whisper transcription encountered an error: ${error.message}`,
-            organizer: user ? user.name : 'You',
-            participants: 1
-        };
-        
-        const meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
-        meetings.unshift(meeting);
-        localStorage.setItem('meetings', JSON.stringify(meetings));
-        
-        loadRecordedMeetings();
+        console.error('Backend transcription error:', error);
+        showToast('❌ Failed to process recording', 'error');
         switchView('meetings');
-        showToast('📝 Recording saved (transcription failed)', 'warning');
     }
 }
 
@@ -743,61 +711,26 @@ async function sendAudioForTranscription(base64Audio) {
             })
         });
         
-        let result;
         if (response.ok) {
-            result = await response.json();
+            const result = await response.json();
             console.log('✅ Backend transcription successful:', result);
+            return result;
         } else {
             throw new Error(`Backend error: ${response.status}`);
         }
         
-        // Create meeting with real transcription
-        const user = checkAuthentication();
-        const meeting = {
-            id: Date.now(),
-            title: `Meeting Recording - ${new Date().toLocaleString()}`,
-            timestamp: Date.now(),
-            duration: Math.floor((Date.now() - recordingStartTime) / 1000),
-            summary: result.summary || 'AI-powered meeting transcription completed',
-            transcript: result.transcript || 'Transcription completed successfully',
-            organizer: user ? user.name : 'You',
-            participants: 1
-        };
-        
-        // Save to localStorage
-        const meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
-        meetings.unshift(meeting);
-        localStorage.setItem('meetings', JSON.stringify(meetings));
-        console.log('✅ Meeting saved with AI transcription:', meeting.title);
-        
-        // Show in UI
-        loadRecordedMeetings();
-        switchView('meetings');
-        showToast('✅ AI transcription complete!', 'success');
-        
     } catch (error) {
         console.error('Backend transcription failed, using fallback:', error);
         
-        // Fallback to local processing
-        const user = checkAuthentication();
-        const meeting = {
-            id: Date.now(),
-            title: `Meeting Recording - ${new Date().toLocaleString()}`,
-            timestamp: Date.now(),
-            duration: Math.floor((Date.now() - recordingStartTime) / 1000),
-            summary: 'Audio recording completed (offline mode)',
-            transcript: 'Meeting transcript - backend unavailable, audio saved locally.',
-            organizer: user ? user.name : 'You',
-            participants: 1
+        // Return fallback result
+        const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+        return {
+            transcript: "Backend transcription failed. This is a fallback mock transcript.",
+            summary: `Mock transcription for ${duration}s recording (backend unavailable)`,
+            duration: duration,
+            confidence: 0.5,
+            language: 'en'
         };
-        
-        const meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
-        meetings.unshift(meeting);
-        localStorage.setItem('meetings', JSON.stringify(meetings));
-        
-        loadRecordedMeetings();
-        switchView('meetings');
-        showToast('📝 Recording saved (offline)', 'warning');
     }
 }
 
@@ -975,53 +908,59 @@ function loadUpcomingMeetings() {
     `).join('');
 }
 
-// Load recorded meetings
-function loadRecordedMeetings() {
-    console.log('Loading recorded meetings...');
+// Load recorded meetings from backend
+async function loadRecordedMeetings() {
+    console.log('Loading recorded meetings from backend...');
     
     if (!elements.meetingsGrid) {
         console.error('Meetings grid element not found!');
         return;
     }
     
-    let meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
-    console.log('Found meetings in localStorage:', meetings.length);
-    
-    // Add sample meetings if none exist
-    if (meetings.length === 0) {
-        console.log('No meetings found, adding sample data...');
-        meetings = [
-            {
-                id: 1,
-                title: '1:1 Sync: Abhi & Michael - OpenAI & IP Issues',
-                timestamp: Date.now() - 86400000, // 1 day ago
-                duration: 1920, // 32 minutes
-                summary: 'Discussed model training concerns and IP setup challenges',
-                organizer: 'Abhi Cherupally',
-                participants: 2
-            },
-            {
-                id: 2,
-                title: 'Team Standup - Sprint Planning',
-                timestamp: Date.now() - 172800000, // 2 days ago
-                duration: 900, // 15 minutes
-                summary: 'Sprint planning and task assignments for Q4',
-                organizer: 'Sarah Johnson',
-                participants: 5
-            },
-            {
-                id: 3,
-                title: 'Product Review - Q4 Features',
-                timestamp: Date.now() - 259200000, // 3 days ago
-                duration: 2700, // 45 minutes
-                summary: 'Reviewed upcoming features and roadmap priorities',
-                organizer: 'Mike Chen',
-                participants: 8
-            }
-        ];
-        localStorage.setItem('meetings', JSON.stringify(meetings));
-        console.log('Sample meetings added');
+    try {
+        // Show loading state
+        elements.meetingsGrid.innerHTML = '<div class="loading">Loading meetings...</div>';
+        
+        // Fetch meetings from backend
+        const response = await fetch(`${backendUrl}/api/meetings`);
+        
+        if (!response.ok) {
+            throw new Error(`Backend error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const meetings = data.meetings || [];
+        
+        console.log(`✅ Loaded ${meetings.length} meetings from backend`);
+        
+        if (meetings.length === 0) {
+            elements.meetingsGrid.innerHTML = '<div class="no-meetings">No meetings recorded yet. Start your first recording!</div>';
+            return;
+        }
+        
+        // Convert backend format to frontend format
+        const formattedMeetings = meetings.map(meeting => ({
+            id: meeting.id,
+            title: meeting.title,
+            timestamp: new Date(meeting.created_at).getTime(),
+            duration: meeting.duration || 0,
+            summary: meeting.summary || 'No summary available',
+            transcript: meeting.transcript || 'No transcript available',
+            organizer: 'You',
+            participants: 1,
+            confidence: meeting.confidence || 0
+        }));
+        
+        displayMeetings(formattedMeetings);
+        
+    } catch (error) {
+        console.error('Failed to load meetings from backend:', error);
+        elements.meetingsGrid.innerHTML = '<div class="error">Failed to load meetings. Please check your connection.</div>';
     }
+}
+
+// Display meetings in the UI
+function displayMeetings(meetings) {
     
     elements.meetingsGrid.innerHTML = meetings.map(meeting => `
         <div class="recorded-meeting-card" data-meeting-id="${meeting.id}">
@@ -1053,26 +992,68 @@ function loadRecordedMeetings() {
 }
 
 // Show meeting detail view
-function showMeetingDetail(meetingId) {
+async function showMeetingDetail(meetingId) {
     console.log('📋 Loading meeting detail for ID:', meetingId);
     
-    // Get meeting data from localStorage
-    const meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
-    const meeting = meetings.find(m => m.id == meetingId);
-    
-    if (!meeting) {
-        console.error('❌ Meeting not found:', meetingId);
-        showToast('Meeting not found', 'error');
-        return;
+    try {
+        // Show loading state
+        updateMeetingDetailView({
+            title: 'Loading...',
+            summary: 'Loading meeting details...',
+            transcript: 'Loading transcript...',
+            organizer: 'Loading...',
+            timestamp: Date.now(),
+            duration: 0
+        });
+        
+        // Switch to meeting detail view first
+        switchView('meetingDetail');
+        
+        // Fetch meeting details from backend
+        const response = await fetch(`${backendUrl}/api/meetings`);
+        if (!response.ok) {
+            throw new Error(`Backend error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const backendMeeting = data.meetings.find(m => m.id === meetingId);
+        
+        if (!backendMeeting) {
+            console.error('❌ Meeting not found:', meetingId);
+            showToast('Meeting not found', 'error');
+            return;
+        }
+        
+        console.log('✅ Found meeting:', backendMeeting.title);
+        
+        // Convert to frontend format
+        const meeting = {
+            id: backendMeeting.id,
+            title: backendMeeting.title,
+            timestamp: new Date(backendMeeting.created_at).getTime(),
+            duration: backendMeeting.duration || 0,
+            summary: backendMeeting.summary || 'No summary available',
+            transcript: backendMeeting.transcript || 'No transcript available',
+            organizer: 'You',
+            participants: 1,
+            confidence: backendMeeting.confidence || 0
+        };
+        
+        // Update meeting detail view with actual data
+        updateMeetingDetailView(meeting);
+        
+    } catch (error) {
+        console.error('Failed to load meeting details:', error);
+        updateMeetingDetailView({
+            title: 'Error Loading Meeting',
+            summary: 'Failed to load meeting details. Please check your connection.',
+            transcript: 'Unable to load transcript.',
+            organizer: 'Unknown',
+            timestamp: Date.now(),
+            duration: 0
+        });
+        showToast('Failed to load meeting details', 'error');
     }
-    
-    console.log('✅ Found meeting:', meeting.title);
-    
-    // Update meeting detail view with actual data
-    updateMeetingDetailView(meeting);
-    
-    // Switch to meeting detail view
-    switchView('meetingDetail');
 }
 
 // Update meeting detail view with actual meeting data

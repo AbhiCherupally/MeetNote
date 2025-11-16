@@ -1425,3 +1425,35 @@ select:focus-visible {
         transform: none !important;
     }
 }
+
+/* Loading and error states */
+.loading, .error, .no-meetings {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: var(--font-size-lg);
+    min-height: 200px;
+}
+
+.error {
+    color: var(--error);
+}
+
+.loading::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top: 2px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: var(--space-sm);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

@@ -1,14 +1,24 @@
-# 🌊 DigitalOcean Deployment Guide
+# 🌊 DigitalOcean Production Deployment - $200 Credits Strategy
 
-Deploy your MeetNote backend on DigitalOcean App Platform for **$5/month** (10 months with your $50 credits!)
+Deploy a **production-grade** MeetNote system with full Whisper AI and managed database using your $200 DigitalOcean credits.
 
-## 💰 Cost Breakdown
+## 💰 Optimized Cost Strategy ($200 Credits = ~6 months)
 
-| Plan | RAM | CPU | Cost/Month | Duration with $50 |
-|------|-----|-----|------------|-------------------|
-| **Basic (Recommended)** | 512MB | 1 vCPU | **$5** | **10 months** ✅ |
-| Professional | 1GB | 1 vCPU | $12 | 4.2 months |
-| Droplet Alternative | 512MB | 1 vCPU | $4 | 12.5 months |
+### **Recommended Production Setup**
+| Service | Specs | Cost/Month | Purpose |
+|---------|-------|------------|----------|
+| **App Platform Pro** | 1GB RAM, 1 vCPU | $12 | Full Whisper AI |
+| **Managed PostgreSQL** | 1GB RAM, 1 vCPU | $15 | Reliable database |
+| **Spaces Storage** | 250GB + CDN | $5 | Audio file storage |
+| **Load Balancer** | SSL + Health checks | $10 | High availability |
+| **Total** | | **$42/month** | **~5 months with $200** |
+
+### **Budget Alternative Setup**
+| Service | Specs | Cost/Month | Purpose |
+|---------|-------|------------|----------|
+| **App Platform Basic** | 512MB RAM | $5 | Mock transcription |
+| **Supabase Free** | PostgreSQL | $0 | Database (90 days) |
+| **Total** | | **$5/month** | **40 months with $200** |
 
 ## 🚀 Quick Deploy (5 minutes)
 

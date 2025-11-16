@@ -1,16 +1,15 @@
 # DigitalOcean App Platform Configuration
-# Optimized for 512MB RAM Basic Plan ($5/month)
-name: meetnote-backend
+# Production setup for $200 credits - Full Whisper AI support
+name: meetnote-production
 services:
 - name: api
   source_dir: /backend
   github:
     repo: AbhiCherupally/MeetNote
     branch: main
-  run_command: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
-  environment_slug: python
+  dockerfile_path: Dockerfile.production
   instance_count: 1
-  instance_size_slug: basic-xxs  # 512MB RAM, 1 vCPU - $5/month
+  instance_size_slug: professional-xs  # 1GB RAM, 1 vCPU - $12/month
   
   # Health check
   health_check:
@@ -25,14 +24,38 @@ services:
   envs:
   - key: ENVIRONMENT
     value: production
+  - key: DEBUG
+    value: "false"
+  - key: SECRET_KEY
+    scope: RUN_TIME
+    type: SECRET
+    # Generate with: openssl rand -hex 32
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    type: SECRET
+    # Will be provided by managed database connection string
+  - key: OPENROUTER_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+    # Your OpenRouter API key for AI summaries
+  - key: WHISPER_MODEL
+    value: base
+  - key: WHISPER_DEVICE
+    value: cpu
+  - key: WHISPER_COMPUTE_TYPE
+    value: int8
   - key: CORS_ORIGINS
-    value: http://localhost:5173,http://localhost:3000,https://meetnoteapp.netlify.app
-  - key: SUPABASE_URL
+    value: "https://meetnoteapp.netlify.app,https://meetnote-app.netlify.app,http://localhost:3000,chrome-extension://*"
+  - key: DO_SPACES_KEY
     scope: RUN_TIME
     type: SECRET
-  - key: SUPABASE_KEY
+  - key: DO_SPACES_SECRET
     scope: RUN_TIME
     type: SECRET
+  - key: DO_SPACES_BUCKET
+    value: meetnote-storage
+  - key: DO_SPACES_REGION
+    value: nyc3
 
 # Optional: Static site for frontend (if you want to host it on DO too)
 # static_sites:

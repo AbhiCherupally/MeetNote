@@ -36,19 +36,21 @@ async def lifespan(app: FastAPI):
     logger.info("Starting MeetNote Backend...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     
-    # Drop and recreate database tables (fixes schema conflicts on Render)
+    # Try to connect to database, but don't fail if it doesn't work
     try:
-        Base.metadata.drop_all(bind=engine)
-        logger.info("Dropped existing tables")
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ Database tables created successfully")
     except Exception as e:
-        logger.warning(f"Could not drop tables: {e}")
-    
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created")
+        logger.warning(f"⚠️ Database connection failed: {e}")
+        logger.info("📝 Running in database-free mode")
     
     # Initialize Whisper model
-    await whisper_service.initialize()
-    logger.info("Whisper model loaded")
+    try:
+        await whisper_service.initialize()
+        logger.info("✅ Whisper model loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Whisper initialization failed: {e}")
+        logger.info("📝 Running without Whisper (will use mock transcription)")
     
     yield
     
@@ -69,6 +71,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:3001", 
         "https://meetnoteapp.netlify.app",

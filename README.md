@@ -1,325 +1,161 @@
-# MeetNote - AI Meeting Assistant
+# MeetNote - AI-Powered Meeting Transcription
 
-> Record, transcribe, and get AI summaries of your meetings. Works invisibly with Zoom, Google Meet, and Microsoft Teams.
+A desktop application inspired by Grain that provides invisible meeting recording and AI transcription using Whisper.
 
-[![Deploy Status](https://img.shields.io/badge/deploy-netlify-00C7B7?logo=netlify)](https://meetnoteapp.netlify.app)
-[![Backend](https://img.shields.io/badge/backend-render-46E3B7?logo=render)](https://meetnote-backend.onrender.com)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+## 🚀 Features
 
----
-
-## 🌟 Features
-
-- **🎙️ Invisible Recording** - Works in background without interfering with meetings
-- **📝 Real-time Transcription** - Whisper AI for accurate, free transcription
-- **🤖 AI Summarization** - OpenRouter's Mistral 7B for intelligent summaries
-- **⭐ Quick Highlights** - Mark important moments with keyboard shortcuts
-- **⌨️ Keyboard Control** - Alt+R to record, Alt+H for highlights
-- **🔐 Secure & Private** - Your data stays on your backend
-- **100% FREE** - All components use free tiers
-
----
+- **Invisible Recording**: Records system audio without joining meetings as a bot
+- **Real-time Transcription**: Uses OpenAI Whisper for accurate speech-to-text
+- **Native macOS UI**: Beautiful, fluid interface that feels native to macOS
+- **Supabase Integration**: Cloud database for storing meetings and transcripts
+- **Audio-Only Capture**: Focuses on audio without screen recording
+- **Always-on-Top Overlay**: Minimal, draggable recording indicator
+- **Modern Architecture**: Electron frontend + FastAPI backend
 
 ## 🏗️ Architecture
 
-```
-┌──────────────────┐      ┌─────────────────────┐      ┌──────────────────┐
-│ Chrome Extension │─────►│   FastAPI Backend   │─────►│  Next.js Frontend │
-│  (Invisible)     │◄─────│ (Whisper + Mistral) │      │   (Dashboard)     │
-└──────────────────┘      └─────────────────────┘      └──────────────────┘
-```
+### Desktop App (Electron)
+- **Frontend**: Modern HTML/CSS/JS with native macOS styling
+- **Audio Capture**: System audio recording using Web APIs
+- **Recording Overlay**: Transparent, always-on-top indicator
+- **Backend Integration**: RESTful API communication
 
-### Tech Stack
+### Backend (FastAPI + Supabase)
+- **Database**: Supabase PostgreSQL for meetings storage
+- **Transcription**: OpenAI Whisper integration
+- **API**: RESTful endpoints for audio processing
+- **Real-time**: WebSocket support for live features
 
-**Backend** (`/backend`)
-- FastAPI (Python)
-- faster-whisper for transcription (FREE)
-- OpenRouter Mistral 7B for AI (FREE)
-- PostgreSQL database
-- Docker ready
+## 📦 Installation
 
-**Frontend** (`/frontend`)
-- Next.js 15 with React 19
-- TypeScript
-- Tailwind CSS + shadcn/ui
-- 50+ custom components
-
-**Extension** (`/chrome-extension`)
-- Manifest V3
-- Invisible content script
-- Real-time audio capture
-- JWT authentication
-
----
-
-## 🚀 Quick Start
+### Prerequisites
+- Node.js 18+
+- Python 3.9+
+- macOS (for desktop app)
+- Supabase account
 
 ### 1. Clone Repository
-
 ```bash
 git clone https://github.com/yourusername/meetnote.git
 cd meetnote
 ```
 
-### 2. Backend Setup
+### 2. Setup Supabase Database
+1. Go to [Supabase](https://supabase.com) and create a new project
+2. Copy your project URL and API key
+3. Run the SQL schema in Supabase SQL Editor:
+```sql
+-- Copy contents from backend/supabase_schema.sql
+```
 
+### 3. Configure Backend
 ```bash
 cd backend
-
-# Install dependencies
 pip install -r requirements.txt
 
 # Create .env file
-cp .env.example .env
-# Edit .env with your configuration
-
-# Run server
-python -m app.main
+echo "SUPABASE_URL=your_supabase_url" > .env
+echo "SUPABASE_KEY=your_supabase_key" >> .env
 ```
 
-Backend runs at `http://localhost:8000`
-
-### 3. Frontend Setup
-
+### 4. Install Desktop App
 ```bash
-cd frontend
-
-# Install dependencies
-bun install  # or npm install
-
-# Create .env.local
-cp .env.local.example .env.local
-
-# Run dev server
-bun dev  # or npm run dev
+cd desktop-app
+chmod +x install.sh
+./install.sh
 ```
 
-Frontend runs at `http://localhost:3000`
+## 🔧 Development
 
-### 4. Chrome Extension Setup
-
-```bash
-# Load extension
-1. Open Chrome -> chrome://extensions/
-2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select chrome-extension folder
-```
-
----
-
-## 📦 Deployment
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide.
-
-### Quick Deploy
-
-**Backend (Render):**
+### Start Backend
 ```bash
 cd backend
-# Push to GitHub, connect to Render
-# Set env vars and deploy
+python supabase_main.py
 ```
 
-**Frontend (Netlify):**
+### Start Desktop App
 ```bash
-cd frontend
-# Push to GitHub, connect to Netlify
-# Auto-deploys on push
+cd desktop-app
+npm start
 ```
 
-**Live URLs:**
-- Frontend: `https://meetnoteapp.netlify.app`
-- Backend: `https://meetnote-backend.onrender.com`
+## 🌐 Deployment
 
----
+### Backend (Render)
+1. Connect your GitHub repository to Render
+2. Create a new Web Service
+3. Set environment variables:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+4. Deploy with build command: `pip install -r requirements.txt`
+5. Start command: `python supabase_main.py`
+
+### Desktop App Distribution
+```bash
+cd desktop-app
+npm run build
+```
 
 ## 🎯 Usage
 
-### Via Chrome Extension
+1. **Start Recording**: Click "New Recording" → "Desktop Audio Capture"
+2. **Monitor Progress**: Use the draggable overlay to track recording
+3. **Stop & Transcribe**: Click stop to process with Whisper
+4. **View Results**: Access transcripts in the Meetings tab
+5. **Export/Share**: Use built-in sharing and export features
 
-1. Install extension
-2. Join meeting (Zoom/Google Meet/Teams)
-3. Click extension icon → Login
-4. Press `Alt+R` to start recording
-5. Press `Alt+H` to create highlights
-6. Press `Alt+T` to toggle transcript overlay
-7. View recordings in dashboard
+## 🔐 Environment Variables
 
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Alt+R` | Start/Stop Recording |
-| `Alt+H` | Create Highlight |
-| `Alt+T` | Toggle Transcript Overlay |
-
----
-
-## 🗂️ Project Structure
-
-```
-meetnote/
-├── backend/                 # FastAPI backend
-│   ├── app/
-│   │   ├── main.py         # FastAPI app
-│   │   ├── api/            # API routes
-│   │   ├── core/           # Config, security
-│   │   ├── db/             # Database models
-│   │   └── services/       # Whisper, AI services
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── README.md
-│
-├── frontend/               # Next.js frontend
-│   ├── src/
-│   │   ├── app/           # App router pages
-│   │   ├── components/    # React components
-│   │   └── lib/           # Utilities, API client
-│   ├── public/
-│   ├── package.json
-│   └── README.md
-│
-├── chrome-extension/       # Chrome extension
-│   ├── manifest.json      # Extension manifest
-│   ├── background.js      # Service worker
-│   ├── content.js         # Content script
-│   ├── popup.html         # Extension popup
-│   ├── popup.js           # Popup logic
-│   └── README.md
-│
-└── DEPLOYMENT.md          # Deployment guide
-```
-
----
-
-## 🔧 Configuration
-
-### Backend Environment Variables
-
+### Backend (.env)
 ```env
-DATABASE_URL=postgresql://...
-SECRET_KEY=your-secret-key
-OPENROUTER_API_KEY=your-api-key
-WHISPER_MODEL=base
-WHISPER_DEVICE=cpu
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-key
+ENVIRONMENT=production
+CORS_ORIGINS=http://localhost:5173,https://your-frontend.com
 ```
 
-### Frontend Environment Variables
+## 🛠️ Tech Stack
 
-```env
-NEXT_PUBLIC_API_URL=https://meetnote-backend.onrender.com
-```
+- **Frontend**: Electron, HTML5, CSS3, JavaScript
+- **Backend**: FastAPI, Python 3.9+
+- **Database**: Supabase (PostgreSQL)
+- **Transcription**: OpenAI Whisper
+- **Deployment**: Render (backend), Electron Builder (desktop)
+- **Audio**: Web Audio API, MediaRecorder
 
----
+## 📱 Platform Support
 
-## 🧪 API Documentation
-
-Once backend is running, visit:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
-### Main Endpoints
-
-```
-POST /api/auth/register        - Register user
-POST /api/auth/login           - Login user
-POST /api/meetings             - Create meeting
-GET  /api/meetings             - List meetings
-POST /api/meetings/{id}/upload-audio  - Upload audio
-POST /api/meetings/{id}/highlights    - Create highlight
-WS   /ws/{client_id}           - Real-time transcription
-```
-
----
-
-## 💰 Cost (All FREE!)
-
-| Component | Service | Cost |
-|-----------|---------|------|
-| Transcription | Whisper AI (local) | **$0** |
-| AI Summaries | OpenRouter Mistral 7B | **$0** |
-| Database | Render PostgreSQL | **$0** (90 days) |
-| Backend | Render Web Service | **$0** (750hrs/mo) |
-| Frontend | Netlify | **$0** (100GB/mo) |
-| Extension | Chrome Web Store | **$5** (one-time) |
-
-**Total: $0/month** 🎉
-
----
-
-## 🛠️ Development
-
-### Run Tests
-
-```bash
-# Backend
-cd backend
-pytest
-
-# Frontend
-cd frontend
-bun test
-```
-
-### Docker
-
-```bash
-# Build and run backend
-cd backend
-docker build -t meetnote-backend .
-docker run -p 8000:8000 --env-file .env meetnote-backend
-```
-
----
+- ✅ macOS (primary)
+- 🔄 Windows (planned)
+- 🔄 Linux (planned)
 
 ## 🤝 Contributing
 
-Contributions welcome! Please:
-
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
----
+## 📄 License
 
-## 📝 License
+MIT License - see LICENSE file for details
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 🆘 Support
 
----
+- **Issues**: GitHub Issues
+- **Discussions**: GitHub Discussions
+- **Email**: support@meetnote.app
 
-## 🙏 Acknowledgments
+## 🔄 Roadmap
 
-- [OpenAI Whisper](https://github.com/openai/whisper) - Speech recognition
-- [faster-whisper](https://github.com/guillaumekln/faster-whisper) - Optimized inference
-- [OpenRouter](https://openrouter.ai/) - LLM API gateway
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python framework
-- [Next.js](https://nextjs.org/) - React framework
-- [shadcn/ui](https://ui.shadcn.com/) - UI components
-
----
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/meetnote/issues)
-- **Email**: support@meetnoteapp.com
-- **Website**: [meetnoteapp.netlify.app](https://meetnoteapp.netlify.app)
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Speaker diarization
-- [ ] Multi-language support
-- [ ] Mobile app (React Native)
-- [ ] Slack/Teams integration
-- [ ] Calendar integration
-- [ ] Video highlights
+- [ ] Windows/Linux support
+- [ ] Calendar integration (Google, Outlook)
+- [ ] Meeting bot for Zoom/Teams
+- [ ] Advanced AI features (summaries, action items)
 - [ ] Team collaboration features
+- [ ] Mobile companion app
 
 ---
 
-Made with ❤️ by the MeetNote team
+**MeetNote** - Making meeting transcription invisible and effortless.

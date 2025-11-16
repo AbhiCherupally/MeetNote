@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: meetnote-backend
+    env: python
+    region: oregon
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && python supabase_main.py
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: http://localhost:5173,http://localhost:3000,https://meetnoteapp.netlify.app

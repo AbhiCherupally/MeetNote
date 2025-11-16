@@ -12,10 +12,10 @@ from typing import List, Optional
 import os
 
 from app.core.config import settings
-from app.api import auth, meetings, transcription
-from app.db.database import engine, Base
+from app.api import transcription
 from app.services.whisper_service import WhisperService
 from app.core.websocket_manager import ConnectionManager
+from supabase import create_client, Client
 
 # Configure logging
 logging.basicConfig(
@@ -36,13 +36,20 @@ async def lifespan(app: FastAPI):
     logger.info("Starting MeetNote Backend...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     
-    # Try to connect to database, but don't fail if it doesn't work
+    # Initialize Supabase client
     try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("✅ Database tables created successfully")
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        
+        if supabase_url and supabase_key:
+            app.state.supabase = create_client(supabase_url, supabase_key)
+            logger.info("✅ Supabase client initialized")
+        else:
+            logger.warning("⚠️ Supabase credentials missing, running without database")
+            app.state.supabase = None
     except Exception as e:
-        logger.warning(f"⚠️ Database connection failed: {e}")
-        logger.info("📝 Running in database-free mode")
+        logger.warning(f"⚠️ Supabase initialization failed: {e}")
+        app.state.supabase = None
     
     # Initialize Whisper model
     try:
@@ -98,20 +105,35 @@ async def root():
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint for frontend"""
+    database_status = "connected" if hasattr(app.state, 'supabase') and app.state.supabase else "disconnected"
     return {
         "status": "healthy",
-        "services": {
-            "api": "running",
-            "whisper": whisper_service.is_ready(),
-            "database": "connected"
-        }
+        "timestamp": "2025-11-16T18:48:39.281446",
+        "version": "2.0.0",
+        "database": f"supabase ({database_status})",
+        "whisper": "available" if whisper_service.is_ready() else "unavailable"
     }
 
 
 # Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(meetings.router, prefix="/api/meetings", tags=["Meetings"])
 app.include_router(transcription.router, prefix="/api/transcription", tags=["Transcription"])
+
+# Meetings endpoint
+@app.get("/api/meetings")
+async def get_meetings():
+    """Get all meetings from Supabase"""
+    try:
+        if not hasattr(app.state, 'supabase') or not app.state.supabase:
+            # Return empty list if no database connection
+            return {"meetings": [], "total": 0}
+        
+        response = app.state.supabase.table('meetings').select('*').order('created_at', desc=True).execute()
+        meetings = response.data if response.data else []
+        
+        return {"meetings": meetings, "total": len(meetings)}
+    except Exception as e:
+        logger.error(f"Failed to fetch meetings: {e}")
+        return {"meetings": [], "total": 0}
 
 
 # WebSocket endpoint for real-time transcription
